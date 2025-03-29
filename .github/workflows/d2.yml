@@ -1,0 +1,28 @@
+name: Auto Build
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build
+    - name: Test
+      run: dotnet test --verbosity normal
+    - name: Publish to Windows
+      run: dotnet publish -c Release -r win-x64 --self-contained true
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4.6.1
+      with:
+        name: losefchat.exe
+        path: bin/Release/net8.0/win-x64/publish/**/*
