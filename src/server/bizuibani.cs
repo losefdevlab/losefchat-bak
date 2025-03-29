@@ -7,75 +7,77 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-
-// Mod : Server, Des.: LC原版服务端核心类模组
-// Part : 闭嘴吧你
-
-public partial class Server
+namespace lcstd
 {
-    public HashSet<string> mutedUsersSet = new HashSet<string>();
-    public void MuteUser(string targetUsername)
-    {
-        try
-        {
-            lock (lockObject)
-            {
-                if (!mutedUsersSet.Contains(targetUsername))
-                {
-                    mutedUsersSet.Add(targetUsername);
-                    Log($"用户 '{targetUsername}' 已被禁言.");
-                    Console.WriteLine($"用户 '{targetUsername}' 已被禁言.");
+    // Mod : Server, Des.: LC原版服务端核心类模组
+    // Part : 闭嘴吧你
 
-                    // 通知该用户已被禁言
-                    ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
-                    if (targetClient != null)
+    public partial class Server
+    {
+        public HashSet<string> mutedUsersSet = new HashSet<string>();
+        public void MuteUser(string targetUsername)
+        {
+            try
+            {
+                lock (lockObject)
+                {
+                    if (!mutedUsersSet.Contains(targetUsername))
                     {
-                        SendMessage(targetClient, "你已被管理员禁言！");
+                        mutedUsersSet.Add(targetUsername);
+                        Log($"用户 '{targetUsername}' 已被禁言.");
+                        Console.WriteLine($"用户 '{targetUsername}' 已被禁言.");
+
+                        // 通知该用户已被禁言
+                        ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
+                        if (targetClient != null)
+                        {
+                            SendMessage(targetClient, "你已被管理员禁言！");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"用户 '{targetUsername}' 已经被禁言了，不要重复操作.");
                     }
                 }
-                else
-                {
-                    Console.WriteLine($"用户 '{targetUsername}' 已经被禁言了，不要重复操作.");
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"在禁言用户时发生异常: {ex}");
+                Log($"在禁言用户时发生异常: {ex}");
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"在禁言用户时发生异常: {ex}");
-            Log($"在禁言用户时发生异常: {ex}");
-        }
-    }
 
-    public void UnmuteUser(string targetUsername)
-    {
-        try
+        public void UnmuteUser(string targetUsername)
         {
-            lock (lockObject)
+            try
             {
-                if (mutedUsersSet.Contains(targetUsername))
+                lock (lockObject)
                 {
-                    mutedUsersSet.Remove(targetUsername);
-                    Log($"用户 '{targetUsername}' 已解除禁言.");
-                    Console.WriteLine($"用户 '{targetUsername}' 已解除禁言.");
-
-                    // 通知该用户已解除禁言
-                    ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
-                    if (targetClient != null)
+                    if (mutedUsersSet.Contains(targetUsername))
                     {
-                        SendMessage(targetClient, "你已被管理员解除禁言！");
+                        mutedUsersSet.Remove(targetUsername);
+                        Log($"用户 '{targetUsername}' 已解除禁言.");
+                        Console.WriteLine($"用户 '{targetUsername}' 已解除禁言.");
+
+                        // 通知该用户已解除禁言
+                        ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
+                        if (targetClient != null)
+                        {
+                            SendMessage(targetClient, "你已被管理员解除禁言！");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"用户 '{targetUsername}' 未被禁言，无法解除.");
                     }
                 }
-                else
-                {
-                    Console.WriteLine($"用户 '{targetUsername}' 未被禁言，无法解除.");
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"在解除禁言时发生异常: {ex}");
+                Log($"在解除禁言时发生异常: {ex}");
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"在解除禁言时发生异常: {ex}");
-            Log($"在解除禁言时发生异常: {ex}");
-        }
-    }
 
+    }
 }
