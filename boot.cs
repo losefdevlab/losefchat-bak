@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using lcstd;
 
 // Mod : 程序, Des.: LC主程序类模组,包含模式选择、启动、模组加载基本重要功能
 class 程序
