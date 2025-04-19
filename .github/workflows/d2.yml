@@ -16,11 +16,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-warn
+      run: dotnet build
     - name: Test
-      run: dotnet test --verbosity normal --no-warn
+      run: dotnet test --verbosity normal
     - name: Publish to Windows
-      run: dotnet publish -c Release -r win-x64 --self-contained true --no-warn
+      run: dotnet publish -c Release -r win-x64 --self-contained true
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4.6.1
       with:
