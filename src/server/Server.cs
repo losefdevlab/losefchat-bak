@@ -494,46 +494,40 @@ namespace lcstd
         {
             while (true)
             {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(true);
-                    if (key.Key == ConsoleKey.F2)
-                    {
-                        Console.Clear();
-                        Console.WriteLine("缓存中的日志:");
-                        if (File.Exists(scacheFilePath))
-                        {
-                            string[] cacheContent = File.ReadAllLines(scacheFilePath);
-                            foreach (var log in cacheContent)
-                            {
-                                Console.WriteLine(log);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("缓存文件不存在。");
-                        }
-                        Console.WriteLine("按 F4 清空缓存。");
-                    }
-                    else if (key.Key == ConsoleKey.F4)
-                    {
-                        if (File.Exists(scacheFilePath))
-                        {
-                            File.WriteAllText(scacheFilePath, string.Empty);
-                            Console.Clear();
-                            Console.WriteLine("日志缓存已清空。");
-                        }
-                        else
-                        {
-                            Console.Clear();
-                            Console.WriteLine("缓存文件不存在。");
-                        }
-                    }
-                }
-                // 实现ACIO(Artificial Control I/O,人工地控制IO)而做的操作
                 string input = Console.ReadLine();
 
-                if (input.StartsWith("/kick"))
+                if (input.StartsWith("/l"))
+                {
+                    Console.Clear();
+                    Console.WriteLine("缓存中的日志:");
+                    if (File.Exists(scacheFilePath))
+                    {
+                        string[] cacheContent = File.ReadAllLines(scacheFilePath);
+                        foreach (var log in cacheContent)
+                        {
+                            Console.WriteLine(log);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("缓存文件不存在。");
+                    }
+                }
+                else if (input.StartsWith("/dl"))
+                {
+                    if (File.Exists(scacheFilePath))
+                    {
+                        File.WriteAllText(scacheFilePath, string.Empty);
+                        Console.Clear();
+                        Console.WriteLine("日志缓存已清空。");
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("缓存文件不存在。");
+                    }
+                }
+                else if (input.StartsWith("/kick"))
                 {
                     string targetUsername = input.Split(' ')[1];
                     KickUser(targetUsername);
@@ -587,6 +581,34 @@ namespace lcstd
                     isServerUseTheWhiteList = false;
                     Log("服务器已关闭白名单模式.");
                 }
+                else if (input.StartsWith("/clear"))
+                {
+                    Console.Clear();
+                }
+                else if (input.StartsWith("/help"))
+                {
+                    Console.WriteLine("可用命令:");
+                    Console.WriteLine("/l: 显示日志缓存");
+                    Console.WriteLine("/dl: 清空日志缓存");
+                    Console.WriteLine("/kick <username>: 踢出用户");
+                    Console.WriteLine("/ban <username>: 封禁用户");
+                    Console.WriteLine("/unban <username>: 解封用户");
+                    Console.WriteLine("/mute <username>: 禁言用户");
+                    Console.WriteLine("/unmute <username>: 解禁言用户");
+                    Console.WriteLine("/users: 显示所有用户");
+                    Console.WriteLine("/search <keyword>: 搜索日志");
+                    Console.WriteLine("/addwl <username>: 将用户添加到白名单");
+                    Console.WriteLine("/rmwl <username>: 从白名单中移除用户");
+                    Console.WriteLine("/usewl: 启用白名单模式");
+                    Console.WriteLine("/notwl: 关闭白名单模式");
+                    Console.WriteLine("/clear: 清空控制台");
+                    Console.WriteLine("/help: 显示可用命令");
+                }
+                else
+                {
+                    Console.WriteLine("无效的命令。请输入/help查看可用命令。");
+                }
+
             }
         }
 
