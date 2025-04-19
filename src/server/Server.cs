@@ -214,7 +214,6 @@ namespace lcstd
                 BroadcastMessage($"{clientInfo.Username}: {data}", clientInfo.Username);
             }
 
-            Console.WriteLine("用户 '" + clientInfo.Username + "' 下线了.");
             lock (lockObject)
             {
                 clientList.Remove(clientInfo);
@@ -485,7 +484,7 @@ namespace lcstd
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"在允许白名单用户加入时发生异常 {ex}");
+
                 Log($"在允许白名单用户加入时发生异常 {ex}");
             }
         }

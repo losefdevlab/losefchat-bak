@@ -103,18 +103,7 @@ namespace lcstd
                     if (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);
-                        if (key.Key == ConsoleKey.F2)
-                        {
-                            // 显示并清空缓存
-                            Console.Clear();
-                            foreach (var msg in messageBuffer)
-                            {
-                                Console.WriteLine($"{DateTime.Now} > {msg}");
-                            }
-                            ClearCache();
-                            Console.WriteLine("已显示缓存消息。新消息将继续存入缓存。");
-                        }
-                        else if (key.Key == ConsoleKey.F9)
+                        if (key.Key == ConsoleKey.F9)
                         {
                             // 屏蔽F9，至于这么做的原因是有人会用CapsWriter语音输入程序,当设置为特定键的时候，就会让终端搞出一些花里胡哨的东西，影响使用体验
                             // 我们想要的是CapsWriter的语音输入, 而不是这些花里胡哨的东西
@@ -133,7 +122,7 @@ namespace lcstd
                         tcpClient?.Close();
                         break;
                     }
-                    else if (message.ToLower() == "/l")
+                    else if (message == "l")
                     {
                         // 显示缓存消息，但不发送到服务端
                         Console.Clear();
@@ -141,11 +130,23 @@ namespace lcstd
                         {
                             Console.WriteLine($"{DateTime.Now} > {msg}");
                         }
-                        Console.WriteLine("已显示缓存消息。新消息将继续存入缓存。");
+                    }
+                    else if (message == "c")
+                    {
+                        Console.Clear();
+                    }
+                    else if (message == "/l")
+                    {
+                        SendMessage("l");
+                    }
+                    else if (message == "/c")
+                    {
+                        SendMessage("c");
                     }
                     else
                     {
                         SendMessage(message);
+                        Console.WriteLine($"{DateTime.Now} > {username}:{message}");
                     }
                 }
             }
