@@ -96,7 +96,7 @@ namespace lcstd
                 receiveThread.Start();
 
                 Console.WriteLine("正在连接，如长时间看到此界面，可能是被封禁、网络问题或密码错误。");
-                Console.WriteLine("按 F2 显示缓存的消息");
+                Console.WriteLine("输入 /l 查看缓存的消息");
 
                 while (true)
                 {
@@ -133,8 +133,20 @@ namespace lcstd
                         tcpClient?.Close();
                         break;
                     }
-
-                    SendMessage(message);
+                    else if (message.ToLower() == "/l")
+                    {
+                        // 显示缓存消息，但不发送到服务端
+                        Console.Clear();
+                        foreach (var msg in messageBuffer)
+                        {
+                            Console.WriteLine($"{DateTime.Now} > {msg}");
+                        }
+                        Console.WriteLine("已显示缓存消息。新消息将继续存入缓存。");
+                    }
+                    else
+                    {
+                        SendMessage(message);
+                    }
                 }
             }
             catch (Exception ex)
