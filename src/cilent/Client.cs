@@ -5,40 +5,68 @@ using System.Net.Sockets;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Collections.Generic;
+
 namespace lcstd
 {
-    // Mod : Client, Des.: LC原版客户端核心类模组
-    // Part : Client主部分
     public partial class Client
     {
         public TcpClient? tcpClient;
         public TcpClient? tcpClient2;
         public NetworkStream? clientStream;
-        public string logFilePath = "logclient.txt"; // Log file path
+        public string logFilePath = "logclient.txt";
+        public string cacheFilePath = "catch.txt";
         public StreamWriter logFile;
+        public StreamWriter cacheFile;
         public string usernamecpy = "";
+        private List<string> messageBuffer = new List<string>();
 
-        public Client()
+        public Client(int other)
         {
-            // 确保日志文件存在
+            logFilePath = $"logclient{other}.txt";
+            // 初始化日志文件
             if (!File.Exists(logFilePath))
             {
                 using (File.Create(logFilePath)) { }
             }
-            // 初始化 StreamWriter
             logFile = new StreamWriter(logFilePath, true);
+
+            // 初始化缓存文件
+            if (!File.Exists(cacheFilePath))
+            {
+                using (File.Create(cacheFilePath)) { }
+            }
+            cacheFile = new StreamWriter(cacheFilePath, true);
         }
 
         ~Client()
         {
-            // 关闭 StreamWriter
             logFile?.Close();
+            cacheFile?.Close();
         }
 
         public void Log(string message)
         {
             logFile.WriteLine($"{DateTime.Now}: {message}");
             logFile.Flush();
+        }
+
+        public void CacheMessage(string message)
+        {
+            cacheFile.WriteLine($"{DateTime.Now}: {message}");
+            cacheFile.Flush();
+            messageBuffer.Add(message);
+            
+            // 异步播放提示音
+            ThreadPool.QueueUserWorkItem(_ => Console.Beep());
+        }
+
+        public void ClearCache()
+        {
+            cacheFile?.Close();
+            File.WriteAllText(cacheFilePath, string.Empty);
+            cacheFile = new StreamWriter(cacheFilePath, true);
+            messageBuffer.Clear();
         }
 
         public void Connect(int ipvx, string serverIP, int serverPort, string username, string password)
@@ -59,21 +87,44 @@ namespace lcstd
                     clientStream = tcpClient2.GetStream();
                 }
 
-                // 发送用户名到服务器
+                // 发送用户名和密码
                 SendMessage(username);
-
                 Thread.Sleep(100);
-
-                // 发送密码到服务器
                 SendMessage(password);
 
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
                 receiveThread.Start();
 
-                Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n或者是如果您的设置文件的第四行没有留空，那么您在首次加入服务器的时候需要\n输入 'exit' 以关闭客户端。");
+                Console.WriteLine("正在连接，如长时间看到此界面，可能是被封禁、网络问题或密码错误。");
+                Console.WriteLine("按 F2 显示缓存的消息");
 
                 while (true)
                 {
+                    if (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(true);
+                        if (key.Key == ConsoleKey.F2)
+                        {
+                            // 显示并清空缓存
+                            Console.Clear();
+                            foreach (var msg in messageBuffer)
+                            {
+                                Console.WriteLine($"{DateTime.Now} > {msg}");
+                            }
+                            ClearCache();
+                            Console.WriteLine("已显示缓存消息。新消息将继续存入缓存。");
+                        }
+                        else if (key.Key == ConsoleKey.F9)
+                        {
+                            // 屏蔽F9，至于这么做的原因是有人会用CapsWriter语音输入程序,当设置为特定键的时候，就会让终端搞出一些花里胡哨的东西，影响使用体验
+                            // 我们想要的是CapsWriter的语音输入, 而不是这些花里胡哨的东西
+                            // 所以我们必须屏蔽f9键，以防止影响使用体验
+                            // 这里所用的一种方案就是忽略
+                            // 但是由于按下f9键然后f9键不会忽略，但是语音输入并不会忽略F9,所以语音输入仍会生效
+                            continue;
+                        }
+                    }
+
                     string message = Console.ReadLine();
 
                     if (message.ToLower() == "exit")
@@ -97,7 +148,6 @@ namespace lcstd
             byte[] message = new byte[32567];
             int bytesRead;
 
-            List<string> messages = new List<string>();
             bool connectionMessageShown = false;
 
             while (true)
@@ -117,19 +167,12 @@ namespace lcstd
                     break;
 
                 string data = Encoding.UTF8.GetString(message, 0, bytesRead);
-                messages.Add($"\a{DateTime.Now} > {data}");
                 string logtmp = $"{DateTime.Now} > {data}";
                 Log(logtmp);
-                // 清除控制台并重新打印所有消息
-                Console.Clear();
-                foreach (var msg in messages)
-                {
-                    Console.WriteLine(msg);
-                }
+                CacheMessage(data);
 
                 if (!connectionMessageShown)
                 {
-                    Console.WriteLine($"已连接到服务器。输入 'exit' 以关闭客户端。");
                     Log($"我({usernamecpy})已连接到服务器。输入 'exit' 以关闭客户端。");
                     connectionMessageShown = true;
                 }
@@ -145,15 +188,7 @@ namespace lcstd
             clientStream?.Flush();
         }
 
-        // Mod开发区域
-        // 以下空间供Mod的开发
-        // Mod开发规则:
-        // 一个mod只能使用一个Class,Class名称必须为mod名称
-        // Mod必须要有一个构造函数,构造函数必须要有一个Client/Server形参,并且在模组类内部创建一个和形参同等类型的对象
-        // 使这个内部对象和实参(形参)完全一样
-        // 必须为public类
-
-        // Mod : MyMod, Des.: 简易模组示例
+        // Mod开发区域保持不变
         public class mod
         {
             public Client clientcpy;

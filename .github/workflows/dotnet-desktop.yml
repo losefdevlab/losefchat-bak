@@ -1,11 +1,9 @@
 name: Auto Build
 on:
   push:
-    branches: [ main ]
-    branches: [ along_feature ]
+    branches: [ main,along_feature ]
   pull_request:
-    branches: [ main ]
-    branches: [ along_feature ]
+    branches: [ main,along_feature ]
 jobs:
   build:
     runs-on: ubuntu-latest

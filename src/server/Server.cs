@@ -21,12 +21,14 @@ namespace lcstd
         public string searchFilePath = "search_results.txt"; // Search results file path
         public string bannedUsersFilePath = "banned_users.txt"; // Banned users file path
         public string whiteListFilePath = "white_list.txt"; // White list file path
+        public string scacheFilePath = "scache.txt"; 
         public HashSet<string> bannedUsersSet;
         public HashSet<string> whiteListSet;
-        public bool isServerUseTheWhiteList = false;
+        public bool isServerUseTheWhiteList = false;// 白名单是否开启的选项,默认关闭
 
         public Server(int port)
         {
+            Log("Server port was set to {port}.");
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -91,21 +93,24 @@ namespace lcstd
             {
                 using (File.Create(pwdFilePath)) { }
             }
+            tcpListener.Start();
             stopwatch.Stop();
             TimeSpan elapsed = stopwatch.Elapsed;
             Log($"Server started. [{elapsed.TotalMilliseconds} s]");
-
-            tcpListener.Start();
 
             Thread consoleInputThread = new Thread(new ThreadStart(ReadConsoleInput));
             consoleInputThread.Start();
 
             while (true)
             {
-                if (!File.Exists(logFilePath))
+                if (!File.Exists(scacheFilePath))
                 {
-                    using (File.Create(logFilePath)) { }
+                    using (File.Create(scacheFilePath)) { }
                 }
+                if (!File.Exists(logFilePath))
+                    {
+                        using (File.Create(logFilePath)) { }
+                    }
                 if (!File.Exists(searchFilePath))
                 {
                     using (File.Create(searchFilePath)) { }
@@ -489,6 +494,43 @@ namespace lcstd
         {
             while (true)
             {
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.F2)
+                    {
+                        Console.Clear();
+                        Console.WriteLine("缓存中的日志:");
+                        if (File.Exists(scacheFilePath))
+                        {
+                            string[] cacheContent = File.ReadAllLines(scacheFilePath);
+                            foreach (var log in cacheContent)
+                            {
+                                Console.WriteLine(log);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("缓存文件不存在。");
+                        }
+                        Console.WriteLine("按 F4 清空缓存。");
+                    }
+                    else if (key.Key == ConsoleKey.F4)
+                    {
+                        if (File.Exists(scacheFilePath))
+                        {
+                            File.WriteAllText(scacheFilePath, string.Empty);
+                            Console.Clear();
+                            Console.WriteLine("日志缓存已清空。");
+                        }
+                        else
+                        {
+                            Console.Clear();
+                            Console.WriteLine("缓存文件不存在。");
+                        }
+                    }
+                }
+                // 实现ACIO(Artificial Control I/O,人工地控制IO)而做的操作
                 string input = Console.ReadLine();
 
                 if (input.StartsWith("/kick"))
@@ -550,11 +592,27 @@ namespace lcstd
 
         public void Log(string message)
         {
+            // 写入日志文件
             using (StreamWriter logFile = new StreamWriter(logFilePath, true))
             {
-                logFile.WriteLine($"{DateTime.Now}: {message}");
-                Console.WriteLine($"\a{DateTime.Now}: {message}");
+                foreach (var line in message.Split('\n'))
+                {
+                    logFile.WriteLine($"{DateTime.Now}: {line}");
+                }
             }
+
+            // 异步写入日志缓存文件
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                using (StreamWriter cacheFile = new StreamWriter(scacheFilePath, true))
+                {
+                    foreach (var line in message.Split('\n'))
+                    {
+                        cacheFile.WriteLine($"{DateTime.Now}: {line}");
+                    }
+                }
+            });
+            // 实现ACIO(Artificial Control I/O,人工地控制IO)而做的操作
         }
 
         public void SearchLog(string searchKeyword)
@@ -603,38 +661,6 @@ namespace lcstd
             public string Username {
                 get;
                 set;
-            }
-        }
-
-        //Mod开发区域
-        //以下区域供Mod的开发
-        //Mod开发规则:
-        //一个mod只能使用一个Class,Class名称必须为mod名称
-        // Mod必须要有一个构造函数,构造函数必须要有一个Client/Server形参,并且在模组类内部创建一个和形参同等类型的对象
-        // 使这个内部对象和实参(形参)完全一样
-        // 必须为public类
-
-        // Mod : mod, Des.: 简易模组示例
-        public class mod
-        {
-            public Server servercpy;
-            public mod(Server server) {
-                Thread a = new Thread(() => {
-                    while(true) servercpy = server;
-                });
-                a.Start();
-            }
-            public string Name {
-                get;
-                set;
-            }
-            public string Description {
-                get;
-                set;
-            }
-            public void Start()
-            {
-                // Console.WriteLine();
             }
         }
     }

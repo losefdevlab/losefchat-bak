@@ -1,9 +1,9 @@
-name: Auto Build
+name: Auto Build for Windows
 on:
   push:
-    branches: [ main ]
+    branches: [ main,along_feature ]
   pull_request:
-    branches: [ main ]
+    branches: [ main,along_feature ]
 jobs:
   build:
     runs-on: windows-latest
