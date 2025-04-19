@@ -1,7 +1,7 @@
 # LosefChat | 一款简易的 DotNet 聊天
 
-主要开发：阿龙
-
+主要开发：阿龙<br>
+于2025.4.19正式停止官方开发,只接受社区开发,新的官方开发仍然保持原来的repo网址<br>
 Copyright (C) 2025 LosefDevLab<br>
 Copyright (C) 2018-Now XYLCS/XIT<br>
 Copyright (C) 2019-2025 kakako Chat Community Studio(KCCS)<br>
