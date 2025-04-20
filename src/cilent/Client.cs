@@ -122,19 +122,6 @@ namespace lcstd
                         tcpClient?.Close();
                         break;
                     }
-                    else if (message == "l")
-                    {
-                        // 显示缓存消息，但不发送到服务端
-                        Console.Clear();
-                        foreach (var msg in messageBuffer)
-                        {
-                            Console.WriteLine($"{DateTime.Now} > {msg}");
-                        }
-                    }
-                    else if (message == "c")
-                    {
-                        Console.Clear();
-                    }
                     else if (message == "/l")
                     {
                         SendMessage("l");
