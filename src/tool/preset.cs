@@ -20,13 +20,13 @@ namespace lcstd
         public string password;
 
         public string presetFilePath = "preset";
-        public void ReadPreset(int preset) // 读取预设
+        public void ReadPreset() // 读取预设
         {
-            if(!File.Exists(presetFilePath + preset.ToString() + ".txt"))
+            if(!File.Exists(presetFilePath + ".txt"))
             {
-                using (File.Create(presetFilePath + preset.ToString() + ".txt")) { }
-                Console.WriteLine("您的预设文件"+ preset.ToString() +"第一次建立或者丢失了, 请填写预设文件信息,注意每一行都要小心填放,不能有行数缺失或者乱放");
-                Console.WriteLine("预设置文件放在Losefchat主程序同目录下，名称为preset" + preset.ToString() + ".txt");
+                using (File.Create(presetFilePath +".txt")) { }
+                Console.WriteLine("您的预设文件"+"第一次建立或者丢失了, 请填写预设文件信息,注意每一行都要小心填放,不能有行数缺失或者乱放");
+                Console.WriteLine("预设置文件放在Losefchat主程序同目录下，名称为preset.txt");
                 Console.WriteLine("请按照以下格式填写:");
                 Console.WriteLine("第一行:您的IP协议(4/6)");
                 Console.WriteLine("第二行:服务器IP地址");
@@ -38,7 +38,7 @@ namespace lcstd
 
             }
             //读取每一行:第一行放IP协议选择,第二行放IP地址,第三行放端口号,第四行放用户名,第四行如果为空就使用计算机名称,第五行放密码
-            string[] lines = File.ReadAllLines(presetFilePath + preset.ToString() + ".txt");
+            string[] lines = File.ReadAllLines(presetFilePath + ".txt");
             if (lines.Length >= 4)
             {
                 ipvx = int.Parse(lines[0]);
