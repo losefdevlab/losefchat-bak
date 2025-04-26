@@ -28,7 +28,7 @@ namespace lcstd
 
         public Server(int port)
         {
-            Log("Server port was set to {port}.");
+            Log($"Server port was set to {port}.");
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -224,33 +224,42 @@ namespace lcstd
 
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
-
-            lock (lockObject)
+            if (message != ""||message.Trim() != "")
             {
-                foreach (var client in clientList)
+                byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
+
+                lock (lockObject)
                 {
-                    // 如果发送者是被禁言用户，则跳过广播其消息
-                    if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
+                    foreach (var client in clientList)
                     {
-                        continue;
+                        // 如果发送者是被禁言用户，则跳过广播其消息
+                        if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
+                        {
+                            continue;
+                        }
+
+                        NetworkStream clientStream = client.TcpClient.GetStream();
+                        clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                        clientStream.Flush();
                     }
-
-                    NetworkStream clientStream = client.TcpClient.GetStream();
-                    clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
-                    clientStream.Flush();
                 }
-            }
 
-            // 记录广播消息到日志文件
-            Log(message);
+                // 记录广播消息到日志文件
+                Log(message);
+            }
         }
 
         public void SendMessage(ClientInfo clientInfo, string message)
         {
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
-            clientInfo.TcpClient.GetStream().Flush();
+            if (message != ""||message.Trim() != "")
+            {
+                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+                clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
+                clientInfo.TcpClient.GetStream().Flush();
+            }
+            else
+            { // nothing to do 
+            }
         }
 
         public void BanUser(string targetUsername)
@@ -613,27 +622,34 @@ namespace lcstd
 
         public void Log(string message)
         {
-            // 写入日志文件
-            using (StreamWriter logFile = new StreamWriter(logFilePath, true))
+            if (message != ""||message.Trim() != "")
             {
-                foreach (var line in message.Split('\n'))
-                {
-                    logFile.WriteLine($"{DateTime.Now}: {line}");
-                }
-            }
-
-            // 异步写入日志缓存文件
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                using (StreamWriter cacheFile = new StreamWriter(scacheFilePath, true))
+                // 写入日志文件
+                using (StreamWriter logFile = new StreamWriter(logFilePath, true))
                 {
                     foreach (var line in message.Split('\n'))
                     {
-                        cacheFile.WriteLine($"{DateTime.Now}: {line}");
+                        logFile.WriteLine($"{DateTime.Now}: {line}");
                     }
                 }
-            });
-            // 实现ACIO(Artificial Control I/O,人工地控制IO)而做的操作
+
+                // 异步写入日志缓存文件
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    using (StreamWriter cacheFile = new StreamWriter(scacheFilePath, true))
+                    {
+                        foreach (var line in message.Split('\n'))
+                        {
+                            cacheFile.WriteLine($"{DateTime.Now}: {line}");
+                        }
+                    }
+                });
+                // 实现ACIO(Artificial Control I/O,人工地控制IO)而做的操作
+            }
+            else
+            {
+                //nothing to do
+            }
         }
 
         public void SearchLog(string searchKeyword)

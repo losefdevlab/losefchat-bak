@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Microsoft.VisualBasic.FileIO;
+
 namespace lcstd
 {
     // Mod : Client, Des.: LC原版客户端核心类模组
@@ -16,20 +16,24 @@ namespace lcstd
         public TcpClient? tcpClient2;
         public NetworkStream? clientStream;
         public string logFilePath = "logclient.txt";
-        public string inputFilePath = "clientinput";
         public StreamWriter logFile;
-        public StreamWriter input;
         public string usernamecpy = "";
-
+        private string inputFilePath = ".ci";
 
         public Client()
         {
-            // 确保日志文件存在
             if (!File.Exists(logFilePath))
             {
                 using (File.Create(logFilePath)) { }
             }
-            // 初始化 StreamWriter
+            if (!File.Exists(inputFilePath))
+            {
+                using (File.Create(inputFilePath)) { }
+            }
+            else
+            {
+                File.WriteAllText(inputFilePath, string.Empty);
+            }
             logFile = new StreamWriter(logFilePath, true);
         }
 
@@ -37,21 +41,19 @@ namespace lcstd
         {
             // 关闭 StreamWriter
             logFile?.Close();
-            input?.Close();
-            if (tcpClient != null)
-            {
-                tcpClient.Close();
-            }
-            if (tcpClient2 != null)
-            {
-                tcpClient2.Close();
-            }
         }
 
         public void Log(string message)
         {
-            logFile.WriteLine($"{DateTime.Now}: {message}");
-            logFile.Flush();
+            if (message != ""||message.Trim() != "")
+            {
+                logFile.WriteLine($"{DateTime.Now}: {message}");
+                logFile.Flush();
+            }
+            else
+            {
+                // nothing to do
+            }
         }
 
         public void Connect(int ipvx, string serverIP, int serverPort, string username, string password)
@@ -72,39 +74,43 @@ namespace lcstd
                     clientStream = tcpClient2.GetStream();
                 }
 
-                // 发送用户名到服务器
                 SendMessage(username);
 
-                Thread.Sleep(100);
+                Thread.Sleep(100);//这一步是为了防止密码和用户名连在一起
 
-                // 发送密码到服务器
                 SendMessage(password);
 
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
                 receiveThread.Start();
+                Thread inputThread = new Thread(new ThreadStart(ProcessInput));
+                inputThread.Start();
 
-                Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n或者是如果您的设置文件的第四行没有留空，那么您在首次加入服务器的时候需要\n输入 'exit' 以关闭客户端。");
-                Thread inputThread = new Thread(_ =>
-                {
-                    while (true)
-                    {
-                        if (File.Exists(inputFilePath))
-                        {
-                            while (File.Exists(inputFilePath))
-                            {
-                                string input = File.ReadAllText(inputFilePath);
-                                if (input.Trim() != "")
-                                {
-                                    SendMessage(input);
-                                }
-                            }
-                        }
-                    }
-                });
+                Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
             }
             catch (Exception ex)
             {
                 Log($"连接服务器时发生异常: {ex.Message}");
+            }
+        }
+
+        private void ProcessInput()
+        {
+            while (true)
+            {
+                using (FileStream fileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (StreamReader reader = new StreamReader(fileStream))
+                {
+                    string msg = reader.ReadToEnd();
+                    if (!string.IsNullOrEmpty(msg))
+                    {
+                        if (msg.Trim() != "")SendMessage(msg);
+                        using (FileStream fileStreamWrite = new FileStream(inputFilePath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))
+                        {
+                        }
+                    }
+                }
+
+                Thread.Sleep(10);
             }
         }
 
@@ -154,11 +160,14 @@ namespace lcstd
 
         public void SendMessage(string message)
         {
-            if (message == null) throw new ArgumentNullException(nameof(message));
+            if (message != ""||message.Trim() != "")
+            {
+                if (message == null) throw new ArgumentNullException(nameof(message));
 
-            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-            clientStream?.Write(messageBytes, 0, messageBytes.Length);
-            clientStream?.Flush();
+                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+                clientStream?.Write(messageBytes, 0, messageBytes.Length);
+                clientStream?.Flush();
+            }
         }
     }
 }
