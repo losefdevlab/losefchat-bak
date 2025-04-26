@@ -48,7 +48,7 @@ class 程序
         }
         else
         {
-            Console.WriteLine("欢迎使用LosefChat v2.0.r1.b25(输出模式启动,输入模式请-ci或者-si)\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v2.0.r1.b27(输出模式启动,输入模式请-ci或者-si)\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
