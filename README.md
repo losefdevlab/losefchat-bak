@@ -76,15 +76,46 @@ openssl req -new -key sfc.key -out sfc.csr
 # ^^^生成签名
 # 此处仅为演示, 实际建议使用可靠的签名, 否则早晚被破解
 # 微软40块钱一份的签名它不香吗？
-# 以上内容仅服务端需要操作, 客户端连接到这种开启安全通讯的服务器需要在程序同目录下提供服务器开放的安全通讯证书
 openssl x509 -req -days 365 -in sfc.csr -signkey sfc.key -out sfc.crt
 # ^^^签名认证
 openssl pkcs12 -export -out sfc.pfx -inkey sfc.key -in sfc.crt
 # ^^^导出
-./losefchat
+# 以上内容仅服务端需要操作, 客户端连接到这种开启安全通讯的服务器需要在程序同目录下提供服务器开放的安全通讯证书
 ```
 
----
+然后请执行以下操作:
+
+### **Windows**:
+
+要连接服务器，请直接启动本程序,  然后填好预设,  然后在另一个命令行中用以下的方式启动losefchat,  这个将作为你输入消息的地方:
+`.\losefchat -ci`
+
+这样你才能输出消息，别认为他麻烦,   否则你正在打消息的时候，别人一条消息发过来，把你的消息编辑体验搞得一团糟你就要骂娘了
+
+当然，如果有能力的话，也可以像下面一样安装Tmux,  编写脚本，以至于下次更方便的启动
+
+### **Linux/macOS**
+
+同样要类似Windows那样操作，但是更方便的操作是请使用Tmux,   这就是意味着你需要安装Tmux
+
+然后请在程序同目录下这样编写一个脚本,  命名为lachcl.sh
+
+```b
+#!/bin/bash
+tmux new-session -s losefchat -d
+tmux send-keys -t losefchat:0 './losefchat' C-m
+tmux split-window -v -t losefchat
+tmux send-keys -t losefchat:0.1 './losefchat -ci' C-m
+tmux attach -t losefchat
+```
+
+执行`chmod +x lachcl.sh`
+
+然后现在你先按下`Ctrl + B`,   然后松开,  然后按上键,  切换到上面的窗格,   这时候你就可以在上面那一部分输入1进入客户端
+
+像上面的方法一样切换到下面的窗格,   这时候你已经可以进行发消息聊天了,上面是消息显示，下面是消息输入
+
+(但是这种方法有一种缺点，就是你需要提前进行编写preset.txt)
 
 ## 贡献&Git规范标准
 
