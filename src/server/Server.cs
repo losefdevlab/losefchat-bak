@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Collections.Concurrent;
 
 namespace lcstd
 {
@@ -15,7 +14,6 @@ namespace lcstd
     // Part : Server主部分
     public partial class Server
     {
-        public ConcurrentQueue<ClientInfo> clientQueue = new ConcurrentQueue<ClientInfo>();
         public TcpListener tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
@@ -32,8 +30,9 @@ namespace lcstd
         private readonly List<string> _logCache = new List<string>();
         private readonly Timer _flushTimer;
 
-        private void EnsureFilesExist()
+        public Server(int port)
         {
+            Log($"Server port was set to {port}.");
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -50,26 +49,16 @@ namespace lcstd
             {
                 using (File.Create(searchFilePath)) { }
             }
+
             if (!File.Exists(bannedUsersFilePath))
             {
                 using (File.Create(bannedUsersFilePath)) { }
             }
+            bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
             if (!File.Exists(whiteListFilePath))
             {
                 using (File.Create(whiteListFilePath)) { }
             }
-            if (!File.Exists(scacheFilePath))
-            {
-                using (File.Create(scacheFilePath)) { }
-            }
-        }
-
-        public Server(int port)
-        {
-            Log($"Server port was set to {port}.");
-            EnsureFilesExist();
-
-            bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
             whiteListSet = File.ReadAllLines(whiteListFilePath).ToHashSet();
             Timer resetAttemptsTimer = new Timer(ResetLoginAttempts, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             tcpListener = new TcpListener(IPAddress.Any, port);
@@ -83,9 +72,34 @@ namespace lcstd
             Log("Server loading...");
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
+            if (!File.Exists(logFilePath))
+            {
+                using (File.Create(logFilePath)) { }
+            }
+            if (!File.Exists(searchFilePath))
+            {
+                using (File.Create(searchFilePath)) { }
+            }
 
-            EnsureFilesExist();
+            if (!File.Exists(bannedUsersFilePath))
+            {
+                using (File.Create(bannedUsersFilePath)) { }
+            }
+            bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
 
+            // Create or read white list file
+            if (!File.Exists(whiteListFilePath))
+            {
+                using (File.Create(whiteListFilePath)) { }
+            }
+            if (!File.Exists(userFilePath))
+            {
+                using (File.Create(userFilePath)) { }
+            }
+            if (!File.Exists(pwdFilePath))
+            {
+                using (File.Create(pwdFilePath)) { }
+            }
             tcpListener.Start();
             stopwatch.Stop();
             TimeSpan elapsed = stopwatch.Elapsed;
@@ -94,15 +108,38 @@ namespace lcstd
             Thread consoleInputThread = new Thread(new ThreadStart(ReadConsoleInput));
             consoleInputThread.Start();
 
-            int numberOfThreads = Environment.ProcessorCount;
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                ThreadPool.QueueUserWorkItem(HandleClientCommunication);
-            }
-
             while (true)
             {
-                EnsureFilesExist();
+                if (!File.Exists(scacheFilePath))
+                {
+                    using (File.Create(scacheFilePath)) { }
+                }
+                if (!File.Exists(logFilePath))
+                {
+                    using (File.Create(logFilePath)) { }
+                }
+                if (!File.Exists(searchFilePath))
+                {
+                    using (File.Create(searchFilePath)) { }
+                }
+
+                if (!File.Exists(bannedUsersFilePath))
+                {
+                    using (File.Create(bannedUsersFilePath)) { }
+                }
+                // Create or read white list file
+                if (!File.Exists(whiteListFilePath))
+                {
+                    using (File.Create(whiteListFilePath)) { }
+                }
+                if (!File.Exists(userFilePath))
+                {
+                    using (File.Create(userFilePath)) { }
+                }
+                if (!File.Exists(pwdFilePath))
+                {
+                    using (File.Create(pwdFilePath)) { }
+                }
                 TcpClient tcpClient = tcpListener.AcceptTcpClient();
 
                 byte[] usernameBytes = new byte[32567];
@@ -122,19 +159,23 @@ namespace lcstd
 
                 ClientInfo clientInfo = new ClientInfo { TcpClient = tcpClient, Username = username };
 
-                clientQueue.Enqueue(clientInfo);
+                lock (lockObject)
+                {
+                    clientList.Add(clientInfo);
+                }
+
+                BroadcastMessage($"{clientInfo.Username} 加入了服务器");
+
+                Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
+                clientThread.Start(clientInfo);
             }
         }
 
-        public void HandleClientCommunication(object state)
+        public void HandleClientCommunication(object clientInfoObj)
         {
             try
             {
-                if (!clientQueue.TryDequeue(out ClientInfo clientInfo))
-                {
-                    return;
-                }
-
+                ClientInfo clientInfo = (ClientInfo)clientInfoObj;
                 TcpClient tcpClient = clientInfo.TcpClient;
 
                 // 封禁用户检测机制
@@ -197,32 +238,26 @@ namespace lcstd
                 Log($"处理用户通信时发生异常: {ex.Message}");
             }
         }
+
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            if (message.Trim() != "")
+            if (message != "" || message.Trim() != "")
             {
                 byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
 
                 lock (lockObject)
                 {
-                    foreach (var client in clientList.ToList())
+                    foreach (var client in clientList)
                     {
-                        try
+                        // 如果发送者是被禁言用户，则跳过广播其消息
+                        if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
                         {
-                            // 如果发送者是被禁言用户，则跳过广播其消息
-                            if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
-                            {
-                                continue;
-                            }
+                            continue;
+                        }
 
-                            NetworkStream clientStream = client.TcpClient.GetStream();
-                            clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
-                            clientStream.Flush();
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"广播消息给用户 '{client.Username}' 时发生异常: {ex.Message}");
-                        }
+                        NetworkStream clientStream = client.TcpClient.GetStream();
+                        clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                        clientStream.Flush();
                     }
                 }
 
@@ -542,7 +577,7 @@ namespace lcstd
                     string targetUsername = input.Split(' ')[1];
                     UnmuteUser(targetUsername);
                 }
-                else if (input.StartsWith("/users"))
+                else if (input.Trim() == "/users")
                 {
                     DisplayAllUsers();
                 }
@@ -553,27 +588,32 @@ namespace lcstd
                 }
                 else if (input.StartsWith("/addwl"))
                 {
-                    string username = input.Substring(10);
+                    string username = input.Substring(7);
                     AddToWhiteList(username);
                 }
                 else if (input.StartsWith("/rmwl"))
                 {
-                    string username = input.Substring(14);
+                    string username = input.Substring(6);
                     RemoveFromWhiteList(username);
                 }
-                else if (input.StartsWith("/usewl"))
+                else if (input.Trim() == "/usewl")
                 {
                     isServerUseTheWhiteList = true;
                     Log("服务器已启用白名单模式.");
                 }
-                else if (input.StartsWith("/notwl"))
+                else if (input.Trim() == "/notwl")
                 {
                     isServerUseTheWhiteList = false;
                     Log("服务器已关闭白名单模式.");
                 }
-                else if (input.StartsWith("/clear"))
+                else if (input.Trim() == "/clear")
                 {
                     Console.Clear();
+                }
+                else if (input.StartsWith("/log"))
+                {
+                    string log = input.Substring(5);
+                    Log("[人工记录日志]:" + log);
                 }
                 else if (input.StartsWith("/help"))
                 {
@@ -592,6 +632,7 @@ namespace lcstd
                     Console.WriteLine("/usewl: 启用白名单模式");
                     Console.WriteLine("/notwl: 关闭白名单模式");
                     Console.WriteLine("/clear: 清空控制台");
+                    Console.WriteLine("/log: 手动的记录日志, 适用于某些事件的标记与记录");
                     Console.WriteLine("/help: 显示可用命令");
                 }
                 else
