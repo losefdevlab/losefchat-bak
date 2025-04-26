@@ -65,11 +65,13 @@ namespace lcstd
 
                 if (ipvx == 4)
                 {
+                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
                     tcpClient.Connect(serverIP, serverPort);
                     clientStream = tcpClient.GetStream();
                 }
                 else if (ipvx == 6)
                 {
+                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
                     tcpClient2.Connect(serverIP, serverPort);
                     clientStream = tcpClient2.GetStream();
                 }
@@ -80,12 +82,14 @@ namespace lcstd
 
                 SendMessage(password);
 
+                Console.WriteLine($"我({username})已连接到服务器。输入 'exit' 以关闭客户端。");
+                Log($"我({username})已连接到服务器。");
+
                 Thread receiveThread = new Thread(new ThreadStart(ReceiveMessage));
                 receiveThread.Start();
                 Thread inputThread = new Thread(new ThreadStart(ProcessInput));
                 inputThread.Start();
-
-                Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
+                
             }
             catch (Exception ex)
             {
@@ -103,7 +107,8 @@ namespace lcstd
                     string msg = reader.ReadToEnd();
                     if (!string.IsNullOrEmpty(msg))
                     {
-                        if (msg.Trim() != "")SendMessage(msg);
+                        if (msg.Trim() != "" && msg != "exit")SendMessage(msg);
+                        else if (msg.Trim() == "exit") { SendMessage("我下线了拜拜"); Environment.Exit(0); }
                         using (FileStream fileStreamWrite = new FileStream(inputFilePath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))
                         {
                         }
@@ -142,19 +147,7 @@ namespace lcstd
                 messages.Add($"\a{DateTime.Now} > {data}");
                 string logtmp = $"{DateTime.Now} > {data}";
                 Log(logtmp);
-                // 清除控制台并重新打印所有消息
-                Console.Clear();
-                foreach (var msg in messages)
-                {
-                    Console.WriteLine(msg);
-                }
-
-                if (!connectionMessageShown)
-                {
-                    Console.WriteLine($"已连接到服务器。输入 'exit' 以关闭客户端。");
-                    Log($"我({usernamecpy})已连接到服务器。输入 'exit' 以关闭客户端。");
-                    connectionMessageShown = true;
-                }
+                Console.WriteLine(logtmp);
             }
         }
 
