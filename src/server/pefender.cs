@@ -18,7 +18,7 @@ namespace lcstd
         private Dictionary<string, DateTime> lockedUsers = new Dictionary<string, DateTime>();
         private Dictionary<string, int> loginAttempts = new Dictionary<string, int>();
         private Dictionary<string, DateTime> lastAttemptTime = new Dictionary<string, DateTime>();
-        private void ResetLoginAttempts(object state) // 重置尝试次数
+        private void ResetLoginAttempts(object? state) // 重置尝试次数
         {
             lock (lockObject)
             {

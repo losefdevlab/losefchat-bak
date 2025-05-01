@@ -25,12 +25,12 @@ class 程序
             while (true)
             {
                 Console.Write("> ");
-                string cinp = Console.ReadLine();
+                string? cinp = Console.ReadLine();
                 if (cinp == "exit")
                 {
                     Environment.Exit(0);
                 }
-                else if (cinp.Length > 1000)
+                else if (cinp?.Length > 1000)
                 {
                     Console.Clear();
                     Console.Write("输入过长，请重新输入。");
@@ -48,7 +48,7 @@ class 程序
         }
         else
         {
-            Console.WriteLine("欢迎使用LosefChat v3.0.r1.b30(输出模式启动,输入模式请-ci或者-si)\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r2.b31\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))

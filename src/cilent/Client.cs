@@ -47,7 +47,7 @@ namespace lcstd
 
         public void Log(string message)
         {
-            if (message != "" || message.Trim() != "")
+            if (message.Trim() != "")
             {
                 logFile.WriteLine($"{DateTime.Now}: {message}");
                 logFile.Flush();
@@ -84,7 +84,7 @@ namespace lcstd
 
                 SendMessage(password);
 
-                Console.WriteLine($"我({username})已连接到服务器。输入 'exit' 以关闭客户端。");
+                Console.WriteLine($"我({username})已连接到服务器。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
                 Log($"我({username})已连接到服务器。");
 
                 ThreadPool.QueueUserWorkItem(state => ReceiveMessage());
@@ -124,8 +124,6 @@ namespace lcstd
             int bytesRead;
 
             List<string> messages = new List<string>();
-            bool connectionMessageShown = false;
-
             while (true)
             {
                 bytesRead = 0;
@@ -152,7 +150,7 @@ namespace lcstd
 
         public void SendMessage(string message)
         {
-            if (message != "" || message.Trim() != "")
+            if (message.Trim() != "")
             {
                 if (message == null) throw new ArgumentNullException(nameof(message));
 

@@ -14,7 +14,7 @@ namespace lcstd
     // Part : Server主部分
     public partial class Server
     {
-        public TcpListener tcpListener;
+        public TcpListener? tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
         public string logFilePath = "log.txt"; // Log file path
@@ -28,11 +28,15 @@ namespace lcstd
 
         private readonly object _cacheLock = new object();
         private readonly List<string> _logCache = new List<string>();
-        private readonly Timer _flushTimer;
+        private readonly Timer? _flushTimer;
+        private int _messageTokens = 7200; // 每小时最大消息数
+        private readonly object _tokenLock = new object();
+        private Timer? _tokenRefillTimer;
 
         public Server(int port)
         {
             Log($"Server port was set to {port}.");
+            File.WriteAllText(scacheFilePath, string.Empty);
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -62,9 +66,15 @@ namespace lcstd
             whiteListSet = File.ReadAllLines(whiteListFilePath).ToHashSet();
             Timer resetAttemptsTimer = new Timer(ResetLoginAttempts, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             tcpListener = new TcpListener(IPAddress.Any, port);
+            _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.5));
 
-            // 设置定时器，每10秒刷新一次缓存到文件
-            _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+            // 初始化限速定时器，每秒补充令牌
+            _tokenRefillTimer = new Timer(RefillTokens, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        }
+        public void Stop()
+        {
+            tcpListener?.Stop();
+            Log("服务器核心已关闭.");
         }
 
         public void Start()
@@ -175,6 +185,11 @@ namespace lcstd
         {
             try
             {
+                if (clientInfoObj == null)
+                {
+                    throw new ArgumentNullException(nameof(clientInfoObj));
+                }
+
                 ClientInfo clientInfo = (ClientInfo)clientInfoObj;
                 TcpClient tcpClient = clientInfo.TcpClient;
 
@@ -241,34 +256,50 @@ namespace lcstd
 
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            if (message != "" || message.Trim() != "")
+            if (message.Trim() != "")
             {
-                byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
-
-                lock (lockObject)
+                bool canSendMessage = false;
+                lock (_tokenLock)
                 {
-                    foreach (var client in clientList)
+                    if (_messageTokens > 0)
                     {
-                        // 如果发送者是被禁言用户，则跳过广播其消息
-                        if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
-                        {
-                            continue;
-                        }
-
-                        NetworkStream clientStream = client.TcpClient.GetStream();
-                        clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
-                        clientStream.Flush();
+                        _messageTokens--;
+                        canSendMessage = true;
                     }
                 }
 
-                // 记录广播消息到日志文件
-                Log(message);
+                if (canSendMessage)
+                {
+                    byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
+
+                    lock (lockObject)
+                    {
+                        foreach (var client in clientList)
+                        {
+                            // 如果发送者是被禁言用户，则跳过广播其消息
+                            if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
+                            {
+                                continue;
+                            }
+
+                            NetworkStream clientStream = client.TcpClient.GetStream();
+                            clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                            clientStream.Flush();
+                        }
+                    }
+
+                    // 记录广播消息到日志文件
+                    Log(message);
+                }
+                else
+                {
+                }
             }
         }
 
         public void SendMessage(ClientInfo clientInfo, string message)
         {
-            if (message != "" || message.Trim() != "")
+            if (message.Trim() != "")
             {
                 byte[] messageBytes = Encoding.UTF8.GetBytes(message);
                 clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
@@ -319,7 +350,7 @@ namespace lcstd
             {
                 lock (lockObject)
                 {
-                    ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
+                    ClientInfo? targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
 
                     if (targetClient != null)
                     {
@@ -356,7 +387,7 @@ namespace lcstd
             {
                 lock (lockObject)
                 {
-                    ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
+                    ClientInfo? targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
 
                     if (targetClient != null)
                     {
@@ -521,10 +552,9 @@ namespace lcstd
             {
                 string input = Console.ReadLine();
 
-                if (input.StartsWith("/l"))
+                if (input.StartsWith("l"))
                 {
                     Console.Clear();
-                    Console.WriteLine("缓存中的日志:");
                     if (File.Exists(scacheFilePath))
                     {
                         string[] cacheContent = File.ReadAllLines(scacheFilePath);
@@ -538,7 +568,7 @@ namespace lcstd
                         Console.WriteLine("缓存文件不存在。");
                     }
                 }
-                else if (input.StartsWith("/dl"))
+                else if (input.StartsWith("dl"))
                 {
                     if (File.Exists(scacheFilePath))
                     {
@@ -615,11 +645,23 @@ namespace lcstd
                     string log = input.Substring(5);
                     Log("[人工记录日志]:" + log);
                 }
+                else if (input.StartsWith("/exit"))
+                {
+
+                    Stop();
+                    Log("服务器已退出.将在几秒后关闭程序.");
+                    Thread.Sleep(2000);
+                    _flushTimer?.Dispose();
+
+                    Environment.Exit(0);
+                }
                 else if (input.StartsWith("/help"))
                 {
+                    Console.WriteLine("欢迎使用LosefChat Server控制台.");
                     Console.WriteLine("可用命令:");
-                    Console.WriteLine("/l: 显示日志缓存");
-                    Console.WriteLine("/dl: 清空日志缓存");
+                    Console.WriteLine("/exit: 退出Server");
+                    Console.WriteLine("l: [ACIO]显示日志缓存");
+                    Console.WriteLine("dl: [ACIO]清空日志缓存");
                     Console.WriteLine("/kick <username>: 踢出用户");
                     Console.WriteLine("/ban <username>: 封禁用户");
                     Console.WriteLine("/unban <username>: 解封用户");
@@ -632,8 +674,12 @@ namespace lcstd
                     Console.WriteLine("/usewl: 启用白名单模式");
                     Console.WriteLine("/notwl: 关闭白名单模式");
                     Console.WriteLine("/clear: 清空控制台");
-                    Console.WriteLine("/log: 手动的记录日志, 适用于某些事件的标记与记录");
+                    Console.WriteLine("/log <message>: 手动的记录日志, 适用于某些事件的标记与记录");
                     Console.WriteLine("/help: 显示可用命令");
+                }
+                else if (input.Trim() == "")
+                {
+                    continue;
                 }
                 else
                 {
@@ -666,7 +712,7 @@ namespace lcstd
         }
         private readonly object _fileLock = new object();
 
-        private void FlushCache(object state)
+        private void FlushCache(object? state)
         {
             List<string> logsToWrite;
 
@@ -708,6 +754,15 @@ namespace lcstd
                 {
                     Console.WriteLine($"Error writing to log file: {ex.Message}");
                 }
+            }
+        }
+
+        private void RefillTokens(object? state)
+        {
+            lock (_tokenLock)
+            {
+                // 每秒补充2条消息的令牌（7200条/小时 ÷ 3600秒/小时 = 2条/秒）
+                _messageTokens = Math.Min(7200, _messageTokens + 2);
             }
         }
 
