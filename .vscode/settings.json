@@ -1,0 +1,91 @@
+{
+  "editor.fontSize": 16,
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "comment",
+        "settings": {
+          "foreground": "#51ff00"
+        }
+      },
+      {
+        "scope": "keyword",
+        "settings": {
+          "foreground": "#008cff"
+        }
+      },
+      {
+        "scope": "variable",
+        "settings": {
+          "foreground": "#ff9900"
+        }
+      },
+      {
+        "scope": "string",
+        "settings": {
+          "foreground": "#9c9c9c"
+        }
+      },
+      {
+        "scope": "entity.name.function",
+        "settings": {
+          "foreground": "#9d00ff"
+        }
+      },
+      {
+        "scope": "constant.numeric",
+        "settings": {
+          "foreground": "#ffffff"
+        }
+      },
+      {
+        "scope": "entity.name.class",
+        "settings": {
+          "foreground": "#ff0000"
+        }
+      },
+      {
+        "scope": "entity.name.type",
+        "settings": {
+          "foreground": "#4EC9B0"
+        }
+      },
+      {
+        "scope": "variable.other.property",
+        "settings": {
+          "foreground": "#9CDCFE"
+        }
+      },
+      {
+        "scope": "constant",
+        "settings": {
+          "foreground": "#96dd70"
+        }
+      },
+      {
+        "scope": "entity.other.attribute-name",
+        "settings": {
+          "foreground": "#D7BA7D"
+        }
+      },
+      {
+        "scope": "keyword.operator",
+        "settings": {
+          "foreground": "#00ffbb"
+        }
+      },
+      {
+        "scope": "punctuation",
+        "settings": {
+          "foreground": "#fff7006b"
+        }
+      }
+    ]
+  },
+  "C_Cpp_Runner.useAddressSanitizer": false,
+  "C_Cpp_Runner.useUndefinedSanitizer": false,
+  "C_Cpp_Runner.useLeakSanitizer": false,
+  "C_Cpp_Runner.showCompilationTime": false,
+  "C_Cpp_Runner.useLinkTimeOptimization": false,
+  "C_Cpp_Runner.msvcSecureNoWarnings": false
+}
