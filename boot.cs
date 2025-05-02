@@ -48,7 +48,7 @@ class Boot
         }
         else
         {
-            Console.WriteLine("欢迎使用LosefChat v3.0.r2.b33\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r2.b42\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))

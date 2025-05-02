@@ -1,3 +1,4 @@
+using Internal;
 using System;
 using System.Text;
 using System.Threading;
@@ -660,6 +661,12 @@ namespace LosefDevLab.LosefChat.lcstd
                     string _bcmsg = input.Substring(4);
                     BroadcastMessage(_bcmsg);
                 }
+                else if (input.StartsWith("/sendm"))
+                {
+                    string _sendm = input.Substring(6);
+                    SendMessage(new ClientInfo() { Username = _sendm.Split(' ')[0] },// Users
+                     _sendm.Split(' ')[1]);// Message
+                }
                 else if (input.StartsWith("/help"))
                 {
                     Console.WriteLine("欢迎使用LosefChat Server控制台.");
@@ -681,6 +688,7 @@ namespace LosefDevLab.LosefChat.lcstd
                     Console.WriteLine("/clear: 清空控制台");
                     Console.WriteLine("/log <message>: 手动的记录日志, 适用于某些事件的标记与记录");
                     Console.WriteLine("/bc <message>: 广播消息给所有用户");
+                    Console.WriteLine("/sendm <username> <message>: 发送私聊消息给指定用户");
                     Console.WriteLine("/help: 显示可用命令");
                 }
                 else if (input.Trim() == "")
