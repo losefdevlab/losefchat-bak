@@ -1,19 +1,17 @@
-# LosefChat | 一款简易的 DotNet 聊天
+# LosefChat | 一款简易的跨平台命令行聊天
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 主要开发：阿龙<br>
-Copyright (C) 2025 LosefDevLab<br>
-Copyright (C) 2018-Now XYLCS/XIT<br>
-Copyright (C) 2019-2025 kakako Chat Community Studio(KCCS)<br>
-Copyright (C) 2024-2025 PPPO Technological Team(PTT)<br>
+Copyright (C) 2025 **LosefDevLab**<br>
+Copyright (C) 2018-Now **XYLCS/XIT**<br>
+Copyright (C) 2019-2025 **kakako Chat Community Studio(KCCS)**<br>
+Copyright (C) 2024-2025 **PPPO Technological Team(PTT)**<br>
 
 以上合并称为 LosefChat开发团队<br>
 
 Losefchat (2025) by LosefChat开发团队 2025-Now freedom-create in XFCSTD2.<br>
-
-使用MIT许可证.<br>
 
 XFCSTD PATH:/XFCSTD2.md
 
@@ -147,6 +145,9 @@ Release & tag信息规范
   -----
   - (更新简述)
   ```
+
+## License
+LosefChat 使用 MIT License
 
 ## Contributors ✨
 
