@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Threading;
 using System.Net.Sockets;
@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using lcstd;
+using LosefDevLab.LosefChat.lcstd;
 using System.Runtime.InteropServices;
 
-// Mod : 程序, Des.: LC主程序类模组,包含模式选择、启动、模组加载基本重要功能
-class 程序
+// Mod : Boot, Des.: LosefChat 启动器
+class Boot
 {
     static void Main(string[] args)
     {
@@ -48,7 +48,7 @@ class 程序
         }
         else
         {
-            Console.WriteLine("欢迎使用LosefChat v3.0.r2.b31\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r2.b33\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
@@ -77,7 +77,7 @@ class 程序
                         {
                             端口 = 2;
                         }
-                        else
+                        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                         {
                             端口 = 9002;
                         }

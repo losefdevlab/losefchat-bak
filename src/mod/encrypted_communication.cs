@@ -1,7 +1,3 @@
-//你居然发现了这么个神秘的东西
-//那么好, 帮我延续一下去tls的开发吧
-//但请务必记得，让用户能够自由选择是否使用安全通讯
-
 using System;
 using System.IO;
 using System.Net.Security;
@@ -11,16 +7,19 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
-    // Mod : 安全通讯, Des.: 给开发者提供的安全通讯轮子
-    public static class SafeCommunication
+    // Mod : 加密通讯, Des.: 给开发者/服务器技术团队/客户端用户的加密安全通讯的轮子
+    // Encrypted communication
+    public static class ecommunication
     {
         private static X509Certificate GetServerCertificate()
         {
             // 这里需要加载你的服务器证书
-            return new X509Certificate("sfc.pfx", "kkko_pppo_ccco_lllo_mmmo_aaao" +
-            "_bbbo_dddo_fffo_gggo_hhho_iioo_jjjo_kkko_lllo_mmmo_nnno_oooo_pppo_qqqo_rrro_ssso_ttto_uuuo_vvvo_wwwo_xxxo_yyyo_zzzo");
+            // 例如:
+            return new X509Certificate("sfc.pfx",//<- 你的证书文件名 \/ 你的证书密码
+             "kkko_pppo_ccco_lllo_mmmo_aaao_bbbo_dddo_fffo_gggo_hhho_iioo_jjjo_kkko_lllo" +
+             "_mmmo_nnno_oooo_pppo_qqqo_rrro_ssso_ttto_uuuo_vvvo_wwwo_xxxo_yyyo_zzzo");
         }
 
         public static SslStream AuthenticateServer(TcpClient tcpClient)
@@ -267,3 +266,14 @@ namespace lcstd
         }
     }
 }
+
+/*
+说明:
+客户端与服务端通过 TLS 1.3 协议建立加密连接，确保基础通信安全。
+连接建立后，双方进行自定义密钥交换，使用 RSA 非对称加密传输 AES 对称密钥。
+接收方使用私钥解密并获取共享的 AES 密钥，用于后续消息加解密。
+发送消息时，使用 AES-CBC 模式加密内容，并加入随机填充数据以增强安全性。
+加密后的数据经混淆处理后发送，防止流量被分析。
+接收方收到数据后，先移除混淆层提取有效数据。
+使用共享密钥和IV解密数据，并还原为原始文本。
+*/

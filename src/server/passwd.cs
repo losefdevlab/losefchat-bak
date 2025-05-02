@@ -1,4 +1,4 @@
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
     // Mod : Server, Des.: LC原版服务端核心类模组
     // Part : 密码

@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
     // Mod : Server, Des.: LC原版服务端核心类模组
     // Part : 闭嘴吧你

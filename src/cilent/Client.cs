@@ -8,7 +8,7 @@ using System.Net;
 using System.Numerics;
 using System.Collections.Generic;
 
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
     // Mod : Client, Des.: LC原版客户端核心类模组
     // Part : Client主部分

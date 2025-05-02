@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
     // Mod : Server, Des.: LC原版服务端核心类模组
     // Part : Server主部分

@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
-    // Mod : Preset, Des.: LC原版预设工具模组
+    // Mod : Preset, Des.: LC原版客户端预设工具模组
     // Part : 预设部分
 
     public partial class Preset
@@ -22,10 +22,10 @@ namespace lcstd
         public string presetFilePath = "preset";
         public void ReadPreset() // 读取预设
         {
-            if(!File.Exists(presetFilePath + ".txt"))
+            if (!File.Exists(presetFilePath + ".txt"))
             {
-                using (File.Create(presetFilePath +".txt")) { }
-                Console.WriteLine("您的预设文件"+"第一次建立或者丢失了, 请填写预设文件信息,注意每一行都要小心填放,不能有行数缺失或者乱放");
+                using (File.Create(presetFilePath + ".txt")) { }
+                Console.WriteLine("您的预设文件" + "第一次建立或者丢失了, 请填写预设文件信息,注意每一行都要小心填放,不能有行数缺失或者乱放");
                 Console.WriteLine("预设置文件放在Losefchat主程序同目录下，名称为preset.txt");
                 Console.WriteLine("请按照以下格式填写:");
                 Console.WriteLine("第一行:您的IP协议(4/6)");
@@ -53,14 +53,14 @@ namespace lcstd
                 }
                 if (username.Contains(" "))
                 {
-                    username = username.Replace(" ","");//删除空格
+                    username = username.Replace(" ", "");//删除空格
                 }
                 if (password.Contains(" "))
                 {
-                    password = password.Replace(" ","");//删除空格
+                    password = password.Replace(" ", "");//删除空格
                 }
             }
         }
-        
+
     }
 }

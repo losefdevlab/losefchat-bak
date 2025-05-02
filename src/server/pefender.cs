@@ -11,7 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace lcstd
+namespace LosefDevLab.LosefChat.lcstd
 {
     public partial class Server
     {
