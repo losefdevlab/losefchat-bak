@@ -767,7 +767,7 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             lock (_tokenLock)
             {
-                // 每秒补充2条消息的令牌（7200条/小时 ÷ 3600秒/小时 = 2条/秒）
+
                 _messageTokens = Math.Min(7200, _messageTokens + 2);
             }
         }

@@ -31,12 +31,15 @@ namespace LosefDevLab.LosefChat.lcstd
             if (index == -1)
             {   // 新用户逻辑
                 File.AppendAllText(userFilePath, username + Environment.NewLine);
-                File.AppendAllText(pwdFilePath, password + Environment.NewLine);
+                string encryptedPassword = Convert.ToBase64String(System.Security.Cryptography.SHA512.HashData(System.Text.Encoding.UTF8.GetBytes(password)));
+                File.AppendAllText(pwdFilePath, encryptedPassword + Environment.NewLine);
                 return true;
             }
             else
             {   // 旧用户逻辑
-                if (passwords[index] == password)
+                string storedEncryptedPassword = passwords[index];
+                string decryptedPassword = Convert.ToBase64String(System.Security.Cryptography.SHA512.HashData(System.Text.Encoding.UTF8.GetBytes(password)));
+                if (storedEncryptedPassword == decryptedPassword)
                 {
                     // 登录成功，重置尝试次数
                     lock (lockObject)
