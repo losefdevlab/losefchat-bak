@@ -17,7 +17,7 @@ namespace LosefDevLab.LosefChat.lcstd
         public TcpClient? tcpClient;
         public TcpClient? tcpClient2;
         public NetworkStream? clientStream;
-        public string logFilePath = "logclient.txt";
+        public string logFilePath = $"logclient_{{DateTime.Now:yyyyMMdd}}.txt";
         public StreamWriter logFile;
         public string usernamecpy = "";
         private string inputFilePath = ".ci";
