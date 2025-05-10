@@ -67,12 +67,14 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 if (ipvx == 4)
                 {
+                    Log($"正在连接 {serverIP}:{serverPort}...");
                     Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
                     tcpClient.Connect(serverIP, serverPort);
                     clientStream = tcpClient.GetStream();
                 }
                 else if (ipvx == 6)
                 {
+                    Log($"正在连接 {serverIP}:{serverPort}...");
                     Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
                     tcpClient2.Connect(serverIP, serverPort);
                     clientStream = tcpClient2.GetStream();
@@ -84,7 +86,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 SendMessage(password);
 
-                Console.WriteLine($"我({username})已连接到服务器。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
+                Console.WriteLine($"我({username})已连接到服务器{serverIP}:{serverPort}。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
                 Log($"我({username})已连接到服务器。");
 
                 ThreadPool.QueueUserWorkItem(state => ReceiveMessage());
