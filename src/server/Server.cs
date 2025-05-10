@@ -17,7 +17,7 @@ namespace LosefDevLab.LosefChat.lcstd
         public TcpListener? tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
-        public string logFilePath = $"log_{{DateTime.Now:yyyyMMdd}}.txt"; // Log file path
+        public string logFilePath = $"log.txt"; // Log file path
         public string searchFilePath = "search_results.txt"; // Search results file path
         public string bannedUsersFilePath = "banned_users.txt"; // Banned users file path
         public string whiteListFilePath = "white_list.txt"; // White list file path
@@ -169,6 +169,16 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 ClientInfo clientInfo = new ClientInfo { TcpClient = tcpClient, Username = username };
 
+                // 检查白名单是否启用以及用户是否在白名单中
+                if (isServerUseTheWhiteList && !whiteListSet.Contains(username))
+                {
+                    Log($"拒绝了一个不在白名单中的用户连接请求: '{username}'.");
+                    SendMessage(clientInfo, $"你 '{username}' 不在白名单中, 无法连接.");
+                    Thread.Sleep(500);
+                    tcpClient.Close();
+                    continue;
+                }
+
                 lock (lockObject)
                 {
                     clientList.Add(clientInfo);
@@ -198,6 +208,16 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     Log($"用户 '{clientInfo.Username}' 被封禁, 无法连接.");
                     SendMessage(clientInfo, $"你 '{clientInfo.Username}' 被封禁, 无法连接.");
+                    Thread.Sleep(500);
+                    tcpClient.Close();
+                    return;
+                }
+
+                // 白名单用户检查
+                if (isServerUseTheWhiteList && !LetWhiteListUserJoin(clientInfo.Username))
+                {
+                    Log($"用户 '{clientInfo.Username}' 不在白名单中, 无法连接.");
+                    SendMessage(clientInfo, $"你 '{clientInfo.Username}' 不在白名单中, 无法连接.");
                     Thread.Sleep(500);
                     tcpClient.Close();
                     return;
@@ -523,27 +543,31 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        public void LetWhiteListUserJoin()
+        public bool LetWhiteListUserJoin(string username)
         {
-            try
+            if (isServerUseTheWhiteList)
             {
-                lock (lockObject)
+                try
                 {
-                    foreach (var client in clientList)
+                    lock (lockObject)
                     {
-                        if (whiteListSet.Contains(client.Username))
+                        foreach (var client in clientList)
                         {
-                            Log(client.Username + " 被添加到了白名单,可以加入服务器了!");
+                            if (whiteListSet.Contains(client.Username))
+                            {
+                                Log(client.Username + " 被添加到了白名单,可以加入服务器了!");
+                                return true;
+                            }
                         }
                     }
-
+                }
+                catch (Exception ex)
+                {
+                    Log($"在允许白名单用户加入时发生异常 {ex}");
+                    return false;
                 }
             }
-            catch (Exception ex)
-            {
-
-                Log($"在允许白名单用户加入时发生异常 {ex}");
-            }
+            return false;
         }
 
         public void ReadConsoleInput()
