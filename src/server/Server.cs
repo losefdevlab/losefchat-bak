@@ -17,10 +17,10 @@ namespace LosefDevLab.LosefChat.lcstd
         public TcpListener? tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
-        public string logFilePath = $"log_{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt"; // Log file path
-        public string searchFilePath = "search_results.txt"; // Search results file path
-        public string bannedUsersFilePath = "banned_users.txt"; // Banned users file path
-        public string whiteListFilePath = "white_list.txt"; // White list file path
+        public string logFilePath = $"log_{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
+        public string searchFilePath = "search_results.txt";
+        public string bannedUsersFilePath = "banned_users.txt";
+        public string whiteListFilePath = "wl.txt"; // 白名单文件路径改为wl.txt
         public string scacheFilePath = "outputcache.txt";
         public HashSet<string> bannedUsersSet;
         public HashSet<string> whiteListSet;
@@ -37,6 +37,10 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             Log($"Server port was set to {port}.");
             File.WriteAllText(scacheFilePath, string.Empty);
+            if (!File.Exists(whiteListFilePath))
+            {
+                using (File.Create(whiteListFilePath)) {}
+            }
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -59,10 +63,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 using (File.Create(bannedUsersFilePath)) { }
             }
             bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
-            if (!File.Exists(whiteListFilePath))
-            {
-                using (File.Create(whiteListFilePath)) { }
-            }
             whiteListSet = File.ReadAllLines(whiteListFilePath).ToHashSet();
             Timer resetAttemptsTimer = new Timer(ResetLoginAttempts, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             tcpListener = new TcpListener(IPAddress.Any, port);
@@ -96,12 +96,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 using (File.Create(bannedUsersFilePath)) { }
             }
             bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
-
-            // Create or read white list file
-            if (!File.Exists(whiteListFilePath))
-            {
-                using (File.Create(whiteListFilePath)) { }
-            }
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -137,11 +131,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     using (File.Create(bannedUsersFilePath)) { }
                 }
-                // Create or read white list file
-                if (!File.Exists(whiteListFilePath))
-                {
-                    using (File.Create(whiteListFilePath)) { }
-                }
                 if (!File.Exists(userFilePath))
                 {
                     using (File.Create(userFilePath)) { }
@@ -168,16 +157,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 }
 
                 ClientInfo clientInfo = new ClientInfo { TcpClient = tcpClient, Username = username };
-
-                // 检查白名单是否启用以及用户是否在白名单中
-                if (isServerUseTheWhiteList && !whiteListSet.Contains(username))
-                {
-                    Log($"拒绝了一个不在白名单中的用户连接请求: '{username}'.");
-                    SendMessage(clientInfo, $"你 '{username}' 不在白名单中, 无法连接.");
-                    Thread.Sleep(500);
-                    tcpClient.Close();
-                    continue;
-                }
 
                 lock (lockObject)
                 {
@@ -213,7 +192,7 @@ namespace LosefDevLab.LosefChat.lcstd
                     return;
                 }
 
-                // 白名单用户检查
+                // 检查白名单是否启用以及用户是否在白名单中
                 if (isServerUseTheWhiteList && !LetWhiteListUserJoin(clientInfo.Username))
                 {
                     Log($"用户 '{clientInfo.Username}' 不在白名单中, 无法连接.");
@@ -227,7 +206,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 Log($"用户 '{clientInfo.Username}' 连接到服务器.");
 
-                byte[] messageBytes = new byte[32567];
+                byte[] messageBytes = new byte[65134];
                 int bytesRead;
 
                 while (true)
@@ -236,7 +215,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                     try
                     {
-                        bytesRead = clientStream.Read(messageBytes, 0, 32567);
+                        bytesRead = clientStream.Read(messageBytes, 0, 65134);
                     }
                     catch (Exception ex)
                     {
@@ -302,9 +281,19 @@ namespace LosefDevLab.LosefChat.lcstd
                                 continue;
                             }
 
-                            NetworkStream clientStream = client.TcpClient.GetStream();
-                            clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
-                            clientStream.Flush();
+                            try
+                            {
+                                NetworkStream clientStream = client.TcpClient.GetStream();
+                                clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                                clientStream.Flush();
+                            }
+                            catch (Exception ex)
+                            {
+                                Log($"广播消息到用户 {client.Username} 时发生异常: {ex.Message}");
+                                // 从客户端列表中移除无法通信的客户端
+                                clientList.Remove(client);
+                                client.TcpClient.Close();
+                            }
                         }
                     }
 
@@ -486,90 +475,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 Log($"在投影当前在线用户的时候发生异常 {ex}");
             }//我还是太谨慎了这玩意可能永远都不会触发
         }
-
-        public void AddToWhiteList(string username)
-        {
-            try
-            {
-                lock (lockObject)
-                {
-                    if (!whiteListSet.Contains(username))
-                    {
-                        whiteListSet.Add(username);
-                        File.WriteAllLines(whiteListFilePath, whiteListSet);
-
-                        Console.WriteLine($"'{username}' 已添加到白名单.");
-                        Log($"'{username}' 已添加到白名单.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"'{username}' 已经在白名单里面了,不要重复添加.");
-                        Log($"'{username}' 已经在白名单里面了,不要重复添加.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"在添加到白名单时发生异常 {ex}");
-                Log($"在添加到白名单时发生异常 {ex}");
-            }
-        }
-
-        public void RemoveFromWhiteList(string username)
-        {
-            try
-            {
-                lock (lockObject)
-                {
-                    if (whiteListSet.Contains(username))
-                    {
-                        whiteListSet.Remove(username);
-                        File.WriteAllLines(whiteListFilePath, whiteListSet);
-
-                        Console.WriteLine($"'{username}' 已从白名单中移除.");
-                        Log($"'{username}' 已从白名单中移除.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"'{username}' 本来就不在白名单里面,不要重复移除.");
-                        Log($"'{username}' 本来就不在白名单里面,不要重复移除.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"在从白名单中移除用户时发生异常 {ex}");
-                Log($"在从白名单中移除用户时发生异常 {ex}");
-            }
-        }
-
-        public bool LetWhiteListUserJoin(string username)
-        {
-            if (isServerUseTheWhiteList)
-            {
-                try
-                {
-                    lock (lockObject)
-                    {
-                        foreach (var client in clientList)
-                        {
-                            if (whiteListSet.Contains(client.Username))
-                            {
-                                Log(client.Username + " 被添加到了白名单,可以加入服务器了!");
-                                return true;
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log($"在允许白名单用户加入时发生异常 {ex}");
-                    return false;
-                }
-            }
-            return false;
-        }
-
         public void ReadConsoleInput()
         {
             while (true)
@@ -640,26 +545,6 @@ namespace LosefDevLab.LosefChat.lcstd
                     string searchKeyword = input.Substring(8);
                     SearchLog(searchKeyword);
                 }
-                else if (input.StartsWith("/addwl"))
-                {
-                    string username = input.Substring(7);
-                    AddToWhiteList(username);
-                }
-                else if (input.StartsWith("/rmwl"))
-                {
-                    string username = input.Substring(6);
-                    RemoveFromWhiteList(username);
-                }
-                else if (input.Trim() == "/usewl")
-                {
-                    isServerUseTheWhiteList = true;
-                    Log("服务器已启用白名单模式.");
-                }
-                else if (input.Trim() == "/notwl")
-                {
-                    isServerUseTheWhiteList = false;
-                    Log("服务器已关闭白名单模式.");
-                }
                 else if (input.Trim() == "/clear")
                 {
                     Console.Clear();
@@ -683,6 +568,24 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     string _bcmsg = input.Substring(4);
                     BroadcastMessage($"服务器广播：{_bcmsg}");
+                }
+                else if (input.Trim() == "/usewl")
+                {
+                    isServerUseTheWhiteList = true;
+                }
+                else if (input.Trim() == "/notwl")
+                {
+                    isServerUseTheWhiteList = false;
+                }
+                else if (input.StartsWith("/addwl"))
+                {
+                    string _username = input.Split(' ')[1];
+                    AddToWhiteList(_username);
+                }
+                else if (input.StartsWith("/rmwl"))
+                {
+                    string _username = input.Split(' ')[1];
+                    RemoveFromWhiteList(_username);
                 }
                 else if (input.StartsWith("/help"))
                 {
@@ -818,6 +721,82 @@ namespace LosefDevLab.LosefChat.lcstd
                 Console.WriteLine($"在搜索日志时发生异常 {ex}");
                 Log($"在搜索日志时发生异常 {ex}");
             }
+        }
+
+        public void AddToWhiteList(string username)
+        {
+            try
+            {
+                lock (lockObject)
+                {
+                    if (!whiteListSet.Contains(username))
+                    {
+                        whiteListSet.Add(username);
+                        File.WriteAllLines(whiteListFilePath, whiteListSet);
+
+                        Console.WriteLine($"'{username}' 已添加到白名单.");
+                        Log($"'{username}' 已添加到白名单.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"'{username}' 已经在白名单里面了,不要重复添加.");
+                        Log($"'{username}' 已经在白名单里面了,不要重复添加.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"在添加到白名单时发生异常 {ex}");
+                Log($"在添加到白名单时发生异常 {ex}");
+            }
+        }
+
+        public void RemoveFromWhiteList(string username)
+        {
+            try
+            {
+                lock (lockObject)
+                {
+                    if (whiteListSet.Contains(username))
+                    {
+                        whiteListSet.Remove(username);
+                        File.WriteAllLines(whiteListFilePath, whiteListSet);
+
+                        Console.WriteLine($"'{username}' 已从白名单中移除.");
+                        Log($"'{username}' 已从白名单中移除.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"'{username}' 本来就不在白名单里面,不要重复移除.");
+                        Log($"'{username}' 本来就不在白名单里面,不要重复移除.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"在从白名单中移除用户时发生异常 {ex}");
+                Log($"在从白名单中移除用户时发生异常 {ex}");
+            }
+        }
+
+        public bool LetWhiteListUserJoin(string username)
+        {
+            if (isServerUseTheWhiteList)
+            {
+                try
+                {
+                    lock (lockObject)
+                    {
+                        return whiteListSet.Contains(username);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"在允许白名单用户加入时发生异常 {ex}");
+                    return false;
+                }
+            }
+            return true; // 如果未启用白名单模式，所有用户都可以加入
         }
 
         // Mod : ClientInfo, Des.: 原版含有的模组,用于存储客户端信息的核心类, Server前置模组
