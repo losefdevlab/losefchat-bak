@@ -6,3 +6,5 @@ losefchat.sln
 *.editorconfig
 /.lingma
 /.vscode
+/.idea
+*.user
