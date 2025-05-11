@@ -24,7 +24,6 @@ namespace LosefDevLab.LosefChat.lcstd
         public HashSet<string> whiteListSet;
         private HashSet<string> _whiteListCache;
         private readonly object _whiteListLock = new object();
-        private FileSystemWatcher _whiteListWatcher;
 
 
         private readonly object _cacheLock = new object();
@@ -69,22 +68,16 @@ namespace LosefDevLab.LosefChat.lcstd
             bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
             Timer resetAttemptsTimer = new Timer(ResetLoginAttempts, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             tcpListener = new TcpListener(IPAddress.Any, port);
-            _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.5));
-
-            // 初始化用户验证数据
             LoadUserCredentials();
-
-            // 初始化限速定时器，每秒补充令牌
             _tokenRefillTimer = new Timer(RefillTokens, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.5));
         }
         public void Stop()
         {
             tcpListener?.Stop();
             Log("服务器核心已关闭。");
-
-            // 停止文件监视器
-            _whiteListWatcher.EnableRaisingEvents = false;
-            _whiteListWatcher.Dispose();
+            _flushTimer?.Dispose();
+            _tokenRefillTimer?.Dispose();
         }
 
         public void Start()
@@ -93,6 +86,13 @@ namespace LosefDevLab.LosefChat.lcstd
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             CreateLCSFile();
+
+            if (tcpListener == null)
+            {
+                Log("TCP监听器未初始化。");
+                return;
+            }
+
             tcpListener.Start();
             stopwatch.Stop();
             TimeSpan elapsed = stopwatch.Elapsed;
@@ -103,36 +103,45 @@ namespace LosefDevLab.LosefChat.lcstd
 
             while (true)
             {
-                CreateLCSFile();
-                TcpClient tcpClient = tcpListener.AcceptTcpClient();
-
-                byte[] usernameBytes = new byte[32567];
-                int usernameBytesRead = tcpClient.GetStream().Read(usernameBytes, 0, 32567);
-                string username = Encoding.UTF8.GetString(usernameBytes, 0, usernameBytesRead);
-
-                byte[] passwordBytes = new byte[32567];
-                int passwordBytesRead = tcpClient.GetStream().Read(passwordBytes, 0, 32567);
-                string password = Encoding.UTF8.GetString(passwordBytes, 0, passwordBytesRead);
-
-                if (!IsUserValid(username, password))
+                try
                 {
-                    Log($"拒绝了一个用户的连接请求: '{username}' 用户名或密码错误.");
-                    tcpClient.Close();
-                    continue;
+                    CreateLCSFile();
+
+                    TcpClient tcpClient = tcpListener.AcceptTcpClient();
+                    tcpClient.ReceiveBufferSize = 65536;
+                    tcpClient.SendBufferSize = 65536;
+
+                    byte[] usernameBytes = new byte[65536];
+                    int usernameBytesRead = tcpClient.GetStream().Read(usernameBytes, 0, 65536);
+                    string username = Encoding.UTF8.GetString(usernameBytes, 0, usernameBytesRead);
+
+                    byte[] passwordBytes = new byte[65536];
+                    int passwordBytesRead = tcpClient.GetStream().Read(passwordBytes, 0, 65536);
+                    string password = Encoding.UTF8.GetString(passwordBytes, 0, passwordBytesRead);
+
+                    if (!IsUserValid(username, password))
+                    {
+                        Log($"拒绝了一个用户的连接请求: '{username}' 用户名或密码错误。");
+                        tcpClient.Close();
+                        continue;
+                    }
+
+                    ClientInfo clientInfo = new ClientInfo { TcpClient = tcpClient, Username = username };
+
+                    lock (lockObject)
+                    {
+                        clientList.Add(clientInfo);
+                    }
+
+                    BroadcastMessage($"{clientInfo.Username} 加入了服务器");
+
+                    Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
+                    clientThread.Start(clientInfo);
                 }
-
-                ClientInfo clientInfo = new ClientInfo { TcpClient = tcpClient, Username = username };
-
-                lock (lockObject)
+                catch (Exception ex)
                 {
-                    clientList.Add(clientInfo);
+                    Log($"接受客户端连接时发生异常: {ex.Message}");
                 }
-
-                BroadcastMessage($"{clientInfo.Username} 加入了服务器");
-
-
-                Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
-                clientThread.Start(clientInfo);
             }
         }
 
@@ -147,18 +156,22 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 ClientInfo clientInfo = (ClientInfo)clientInfoObj;
                 TcpClient tcpClient = clientInfo.TcpClient;
-
-                // 封禁用户检测机制
                 if (bannedUsersSet.Contains(clientInfo.Username))
                 {
-                    Log($"用户 '{clientInfo.Username}' 被封禁, 无法连接.");
-                    SendMessage(clientInfo, $"你 '{clientInfo.Username}' 被封禁, 无法连接.");
+                    Log($"用户 '{clientInfo.Username}' 被封禁, 无法连接。");
+                    SendMessage(clientInfo, $"你 '{clientInfo.Username}' 被封禁, 无法连接。");
                     Thread.Sleep(500);
-                    tcpClient.Close();
+                    tcpClient?.Close();
                     return;
                 }
 
-                NetworkStream clientStream = tcpClient.GetStream();
+                NetworkStream clientStream = tcpClient?.GetStream();
+                if (clientStream == null || !tcpClient.Connected)
+                {
+                    Log($"无法获取网络流或客户端 '{clientInfo.Username}' 已断开。");
+                    tcpClient?.Close();
+                    return;
+                }
 
                 Log($"用户 '{clientInfo.Username}' 连接到服务器.");
 
@@ -171,7 +184,15 @@ namespace LosefDevLab.LosefChat.lcstd
 
                     try
                     {
-                        bytesRead = clientStream.Read(messageBytes, 0, 65134);
+                        if (clientStream.DataAvailable)
+                        {
+                            bytesRead = clientStream.Read(messageBytes, 0, 65134);
+                        }
+                        else
+                        {
+                            Thread.Sleep(1);
+                            continue;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -184,15 +205,11 @@ namespace LosefDevLab.LosefChat.lcstd
 
                     string data = Encoding.UTF8.GetString(messageBytes, 0, bytesRead);
 
-                    // 检查用户是否被禁言
                     if (mutedUsersSet.Contains(clientInfo.Username))
                     {
-                        // 忽略被禁言用户的消息
                         SendMessage(clientInfo, "你已被禁言，无法发送消息！");
                         continue;
                     }
-
-                    // 广播消息到所有客户端
                     BroadcastMessage($"{clientInfo.Username}: {data}", clientInfo.Username);
                 }
 
@@ -200,8 +217,8 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     clientList.Remove(clientInfo);
                 }
-                BroadcastMessage($"{clientInfo.Username} 下线.");
-                tcpClient.Close();
+                BroadcastMessage($"{clientInfo.Username} 下线。");
+                tcpClient?.Close();
             }
             catch (Exception ex)
             {
@@ -211,54 +228,56 @@ namespace LosefDevLab.LosefChat.lcstd
 
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            if (message.Trim() != "")
+            if (message.Trim() == "")
             {
-                bool canSendMessage = false;
-                lock (_tokenLock)
+                return;
+            }
+
+            bool canSendMessage = false;
+            lock (_tokenLock)
+            {
+                if (_messageTokens > 0)
                 {
-                    if (_messageTokens > 0)
-                    {
-                        _messageTokens--;
-                        canSendMessage = true;
-                    }
+                    _messageTokens--;
+                    canSendMessage = true;
                 }
+            }
 
-                if (canSendMessage)
+            if (canSendMessage)
+            {
+                byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
+
+                lock (lockObject)
                 {
-                    byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
-
-                    lock (lockObject)
+                    foreach (var client in clientList.ToList())
                     {
-                        foreach (var client in clientList)
+                        if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
                         {
-                            // 如果发送者是被禁言用户，则跳过广播其消息
-                            if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername))
-                            {
-                                continue;
-                            }
+                            continue;
+                        }
 
-                            try
+                        try
+                        {
+                            if (client.TcpClient != null && client.TcpClient.Connected)
                             {
                                 NetworkStream clientStream = client.TcpClient.GetStream();
-                                clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
-                                clientStream.Flush();
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"广播消息到用户 {client.Username} 时发生异常: {ex.Message}");
-                                // 从客户端列表中移除无法通信的客户端
-                                clientList.Remove(client);
-                                client.TcpClient.Close();
+                                if (clientStream.CanWrite)
+                                {
+                                    clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                                    clientStream.Flush();
+                                }
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"广播消息到用户 {client.Username} 时发生异常: {ex.Message}");
+                            clientList.Remove(client);
+                            client.TcpClient?.Close();
+                        }
                     }
+                }
 
-                    // 记录广播消息到日志文件
-                    Log(message);
-                }
-                else
-                {
-                }
+                Log(message);
             }
         }
 
@@ -284,16 +303,10 @@ namespace LosefDevLab.LosefChat.lcstd
                     if (!bannedUsersSet.Contains(targetUsername))
                     {
                         bannedUsersSet.Add(targetUsername);
-
-                        // Update banned users file
                         File.WriteAllLines(bannedUsersFilePath, bannedUsersSet);
 
                         Console.WriteLine($"用户 '{targetUsername}' 已被封禁.");
-
-                        // Try to kick out the banned user
                         KickBannedUser(targetUsername);
-
-                        // Log ban operation to the log file
                         Log($"用户 '{targetUsername}' 已被服务器封禁.");
                     }
                     else
@@ -321,20 +334,14 @@ namespace LosefDevLab.LosefChat.lcstd
                     {
                         SendMessage(targetClient, "你被封了!");
 
-                        // Send kicked out message to other users
                         BroadcastMessage($"用户 '{targetUsername}' 被服务器封禁");
-
-                        // Remove the kicked out user from the client list
                         clientList.Remove(targetClient);
 
                         Thread.Sleep(3000);
-
-                        // Close the connection with the kicked out user
                         targetClient.TcpClient.Close();
                     }
                     else
                     {
-                        // If user does not exist, log invalid user message to the log file
                         Log($"虽然没有踢出 '{targetUsername}'(可能不在线), 但是我们封禁了, 下一次他进不来.");
                     }
                 }
@@ -357,19 +364,12 @@ namespace LosefDevLab.LosefChat.lcstd
                     if (targetClient != null)
                     {
                         SendMessage(targetClient, "你被管理员踢了");
-
-                        // Send kicked out message to other users
                         BroadcastMessage($"用户 '{targetUsername}' 被管理员踢了");
-
-                        // Remove the kicked out user from the client list
                         clientList.Remove(targetClient);
-
-                        // Close the connection with the kicked out user
                         targetClient.TcpClient.Close();
                     }
                     else
                     {
-                        // If user does not exist, log invalid user message to the log file
                         Log($"'{targetUsername}' 这人我寻思着也不在线啊怎么踢？");
                     }
                 }
@@ -390,13 +390,8 @@ namespace LosefDevLab.LosefChat.lcstd
                     if (bannedUsersSet.Contains(targetUsername))
                     {
                         bannedUsersSet.Remove(targetUsername);
-
-                        // Update banned users file
                         File.WriteAllLines(bannedUsersFilePath, bannedUsersSet);
-
                         Console.WriteLine($"'{targetUsername}' 出狱了");
-
-                        // Log unban operation to the log file
                         Log($"'{targetUsername}' 经服务器官方批准,出狱");
                     }
                     else
@@ -412,7 +407,7 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        public void DisplayAllUsers()//显示所有用户
+        public void DisplayAllUsers()
         {
             try
             {
@@ -421,7 +416,7 @@ namespace LosefDevLab.LosefChat.lcstd
                     Console.WriteLine("当前在线用户:");
                     foreach (var client in clientList)
                     {
-                        Console.WriteLine("    " + client.Username);//在这里遍历然后显示
+                        Console.WriteLine("    " + client.Username);
                     }
                 }
             }
@@ -429,7 +424,7 @@ namespace LosefDevLab.LosefChat.lcstd
             {
                 Console.WriteLine($"在投影当前在线用户的时候发生异常 {ex}");
                 Log($"在投影当前在线用户的时候发生异常 {ex}");
-            }//我还是太谨慎了这玩意可能永远都不会触发
+            }
         }
         public void ReadConsoleInput()
         {
@@ -482,12 +477,12 @@ namespace LosefDevLab.LosefChat.lcstd
                     string targetUsername = input.Split(' ')[1];
                     UnbanUser(targetUsername);
                 }
-                else if (input.StartsWith("/mute")) // 禁言命令
+                else if (input.StartsWith("/mute"))
                 {
                     string targetUsername = input.Split(' ')[1];
                     MuteUser(targetUsername);
                 }
-                else if (input.StartsWith("/unmute")) // 解禁言命令
+                else if (input.StartsWith("/unmute"))
                 {
                     string targetUsername = input.Split(' ')[1];
                     UnmuteUser(targetUsername);
@@ -570,19 +565,13 @@ namespace LosefDevLab.LosefChat.lcstd
 
 
 
-
         private void LoadUserCredentials()
         {
             try
             {
-                // 读取用户凭证文件
                 var userLines = File.ReadAllLines(userFilePath);
                 var pwdLines = File.ReadAllLines(pwdFilePath);
-
-                // 清空现有凭证
                 userCredentials.Clear();
-
-                // 加载新的凭证
                 for (int i = 0; i < Math.Min(userLines.Length, pwdLines.Length); i++)
                 {
                     if (!string.IsNullOrEmpty(userLines[i]) && !string.IsNullOrEmpty(pwdLines[i]))

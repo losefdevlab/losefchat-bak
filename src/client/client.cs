@@ -24,6 +24,10 @@ namespace LosefDevLab.LosefChat.lcstd
 
         public Client()
         {
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            logFilePath = Path.Combine(baseDirectory, "logclient.txt");
+            inputFilePath = Path.Combine(baseDirectory, ".ci");
+
             if (!File.Exists(logFilePath))
             {
                 using (File.Create(logFilePath)) { }
@@ -36,7 +40,12 @@ namespace LosefDevLab.LosefChat.lcstd
             {
                 File.WriteAllText(inputFilePath, string.Empty);
             }
-            logFile = new StreamWriter(logFilePath, true);
+
+            using (StreamWriter writer = new StreamWriter(logFilePath, true))
+            {
+                writer.WriteLine($"Client initialized at {DateTime.Now}");
+                writer.Flush();
+            }
         }
 
         ~Client()
@@ -49,12 +58,12 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             if (message.Trim() != "")
             {
-                logFile.WriteLine($"{DateTime.Now}: {message}");
-                logFile.Flush();
-            }
-            else
-            {
-                // nothing to do
+                string logMessage = $"{DateTime.Now}: {message}";
+                using (StreamWriter writer = new StreamWriter(logFilePath, true))
+                {
+                    writer.WriteLine(logMessage);
+                    writer.Flush();
+                }
             }
         }
 
@@ -150,13 +159,26 @@ namespace LosefDevLab.LosefChat.lcstd
 
         public void SendMessage(string message)
         {
-            if (message.Trim() != "")
-            {
-                if (message == null) throw new ArgumentNullException(nameof(message));
+            if (string.IsNullOrWhiteSpace(message))
+                return;
 
+            if (message == null) throw new ArgumentNullException(nameof(message));
+
+            if (clientStream == null || !tcpClient.Connected)
+            {
+                Log("无法发送消息，网络流未初始化或连接已关闭。");
+                return;
+            }
+
+            try
+            {
                 byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-                clientStream?.Write(messageBytes, 0, messageBytes.Length);
-                clientStream?.Flush();
+                clientStream.Write(messageBytes, 0, messageBytes.Length);
+                clientStream.Flush();
+            }
+            catch (Exception ex)
+            {
+                Log($"发送消息时发生异常: {ex.Message}");
             }
         }
     }
