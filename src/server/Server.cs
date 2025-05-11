@@ -10,37 +10,34 @@ using System.Net;
 
 namespace LosefDevLab.LosefChat.lcstd
 {
-    // Mod : Server, Des.: LC原版服务端核心类模组
+    // Mod : Server, Des.: LC原版服务端核心类模組
     // Part : Server主部分
     public partial class Server
     {
         public TcpListener? tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
-        public string logFilePath = $"log_{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
         public string searchFilePath = "search_results.txt";
         public string bannedUsersFilePath = "banned_users.txt";
-        public string whiteListFilePath = "wl.txt"; // 白名单文件路径改为wl.txt
         public string scacheFilePath = "outputcache.txt";
         public HashSet<string> bannedUsersSet;
         public HashSet<string> whiteListSet;
-        public bool isServerUseTheWhiteList = false;// 白名单是否开启的选项,默认关闭
+        private HashSet<string> _whiteListCache;
+        private readonly object _whiteListLock = new object();
+        private FileSystemWatcher _whiteListWatcher;
+
 
         private readonly object _cacheLock = new object();
         private readonly List<string> _logCache = new List<string>();
         private readonly Timer? _flushTimer;
-        private int _messageTokens = 7200; // 每小时最大消息数
+        private int _messageTokens = 7200; // 每小时最大消息数,7.2km/h = 2m/s, m -> messages
         private readonly object _tokenLock = new object();
         private Timer? _tokenRefillTimer;
 
-        public Server(int port)
+        private readonly Dictionary<string, string> userCredentials = new Dictionary<string, string>();
+
+        public void CreateLCSFile()
         {
-            Log($"Server port was set to {port}.");
-            File.WriteAllText(scacheFilePath, string.Empty);
-            if (!File.Exists(whiteListFilePath))
-            {
-                using (File.Create(whiteListFilePath)) {}
-            }
             if (!File.Exists(userFilePath))
             {
                 using (File.Create(userFilePath)) { }
@@ -62,11 +59,20 @@ namespace LosefDevLab.LosefChat.lcstd
             {
                 using (File.Create(bannedUsersFilePath)) { }
             }
+        }
+
+        public Server(int port)
+        {
+            Log($"Server port was set to {port}.");
+            File.WriteAllText(scacheFilePath, string.Empty);
+            CreateLCSFile();
             bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
-            whiteListSet = File.ReadAllLines(whiteListFilePath).ToHashSet();
             Timer resetAttemptsTimer = new Timer(ResetLoginAttempts, null, TimeSpan.Zero, TimeSpan.FromDays(1));
             tcpListener = new TcpListener(IPAddress.Any, port);
             _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.5));
+
+            // 初始化用户验证数据
+            LoadUserCredentials();
 
             // 初始化限速定时器，每秒补充令牌
             _tokenRefillTimer = new Timer(RefillTokens, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
@@ -74,7 +80,11 @@ namespace LosefDevLab.LosefChat.lcstd
         public void Stop()
         {
             tcpListener?.Stop();
-            Log("服务器核心已关闭.");
+            Log("服务器核心已关闭。");
+
+            // 停止文件监视器
+            _whiteListWatcher.EnableRaisingEvents = false;
+            _whiteListWatcher.Dispose();
         }
 
         public void Start()
@@ -82,28 +92,7 @@ namespace LosefDevLab.LosefChat.lcstd
             Log("Server loading...");
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            if (!File.Exists(logFilePath))
-            {
-                using (File.Create(logFilePath)) { }
-            }
-            if (!File.Exists(searchFilePath))
-            {
-                using (File.Create(searchFilePath)) { }
-            }
-
-            if (!File.Exists(bannedUsersFilePath))
-            {
-                using (File.Create(bannedUsersFilePath)) { }
-            }
-            bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
-            if (!File.Exists(userFilePath))
-            {
-                using (File.Create(userFilePath)) { }
-            }
-            if (!File.Exists(pwdFilePath))
-            {
-                using (File.Create(pwdFilePath)) { }
-            }
+            CreateLCSFile();
             tcpListener.Start();
             stopwatch.Stop();
             TimeSpan elapsed = stopwatch.Elapsed;
@@ -114,31 +103,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
             while (true)
             {
-                if (!File.Exists(scacheFilePath))
-                {
-                    using (File.Create(scacheFilePath)) { }
-                }
-                if (!File.Exists(logFilePath))
-                {
-                    using (File.Create(logFilePath)) { }
-                }
-                if (!File.Exists(searchFilePath))
-                {
-                    using (File.Create(searchFilePath)) { }
-                }
-
-                if (!File.Exists(bannedUsersFilePath))
-                {
-                    using (File.Create(bannedUsersFilePath)) { }
-                }
-                if (!File.Exists(userFilePath))
-                {
-                    using (File.Create(userFilePath)) { }
-                }
-                if (!File.Exists(pwdFilePath))
-                {
-                    using (File.Create(pwdFilePath)) { }
-                }
+                CreateLCSFile();
                 TcpClient tcpClient = tcpListener.AcceptTcpClient();
 
                 byte[] usernameBytes = new byte[32567];
@@ -165,6 +130,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 BroadcastMessage($"{clientInfo.Username} 加入了服务器");
 
+
                 Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
                 clientThread.Start(clientInfo);
             }
@@ -187,16 +153,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     Log($"用户 '{clientInfo.Username}' 被封禁, 无法连接.");
                     SendMessage(clientInfo, $"你 '{clientInfo.Username}' 被封禁, 无法连接.");
-                    Thread.Sleep(500);
-                    tcpClient.Close();
-                    return;
-                }
-
-                // 检查白名单是否启用以及用户是否在白名单中
-                if (isServerUseTheWhiteList && !LetWhiteListUserJoin(clientInfo.Username))
-                {
-                    Log($"用户 '{clientInfo.Username}' 不在白名单中, 无法连接.");
-                    SendMessage(clientInfo, $"你 '{clientInfo.Username}' 不在白名单中, 无法连接.");
                     Thread.Sleep(500);
                     tcpClient.Close();
                     return;
@@ -569,24 +525,6 @@ namespace LosefDevLab.LosefChat.lcstd
                     string _bcmsg = input.Substring(4);
                     BroadcastMessage($"服务器广播：{_bcmsg}");
                 }
-                else if (input.Trim() == "/usewl")
-                {
-                    isServerUseTheWhiteList = true;
-                }
-                else if (input.Trim() == "/notwl")
-                {
-                    isServerUseTheWhiteList = false;
-                }
-                else if (input.StartsWith("/addwl"))
-                {
-                    string _username = input.Split(' ')[1];
-                    AddToWhiteList(_username);
-                }
-                else if (input.StartsWith("/rmwl"))
-                {
-                    string _username = input.Split(' ')[1];
-                    RemoveFromWhiteList(_username);
-                }
                 else if (input.StartsWith("/help"))
                 {
                     Console.WriteLine("欢迎使用LosefChat Server控制台.");
@@ -601,10 +539,6 @@ namespace LosefDevLab.LosefChat.lcstd
                     Console.WriteLine("/unmute <username>: 解禁言用户");
                     Console.WriteLine("/users: 显示所有用户");
                     Console.WriteLine("/search <keyword>: 搜索日志");
-                    Console.WriteLine("/addwl <username>: 将用户添加到白名单");
-                    Console.WriteLine("/rmwl <username>: 从白名单中移除用户");
-                    Console.WriteLine("/usewl: 启用白名单模式");
-                    Console.WriteLine("/notwl: 关闭白名单模式");
                     Console.WriteLine("/clear: 清空控制台");
                     Console.WriteLine("/log <message>: 手动的记录日志, 适用于某些事件的标记与记录");
                     Console.WriteLine("/bc <message>: 广播消息给所有用户");
@@ -622,73 +556,8 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        public void Log(string message)
-        {
-            try
-            {
-                if (message.Trim() != "")
-                {
-                    lock (_cacheLock)
-                    {
-                        foreach (var line in message.Split('\n'))
-                        {
-                            _logCache.Add($"{DateTime.Now}: {line}");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in cache log file: {ex.Message}");
-                Log($"Error in cache log file: {ex.Message}");
-            }
-        }
+
         private readonly object _fileLock = new object();
-
-        private void FlushCache(object? state)
-        {
-            List<string> logsToWrite;
-
-            lock (_cacheLock)
-            {
-                logsToWrite = new List<string>(_logCache);
-                _logCache.Clear();
-            }
-
-            if (logsToWrite.Count > 0)
-            {
-                try
-                {
-                    // 写入主日志文件
-                    lock (_fileLock)
-                    {
-                        using (StreamWriter logFile = new StreamWriter(logFilePath, true))
-                        {
-                            foreach (var log in logsToWrite)
-                            {
-                                logFile.WriteLine(log);
-                            }
-                        }
-                    }
-
-                    // 写入缓存文件
-                    lock (_fileLock)
-                    {
-                        using (StreamWriter cacheFile = new StreamWriter(scacheFilePath, true))
-                        {
-                            foreach (var log in logsToWrite)
-                            {
-                                cacheFile.WriteLine(log);
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error writing to log file: {ex.Message}");
-                }
-            }
-        }
 
         private void RefillTokens(object? state)
         {
@@ -699,130 +568,32 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        public void SearchLog(string searchKeyword)
+
+
+
+        private void LoadUserCredentials()
         {
             try
             {
-                var logContent = File.ReadAllLines(logFilePath);
-                var matchingResults = logContent.Where(line => line.Contains(searchKeyword)).ToList();
+                // 读取用户凭证文件
+                var userLines = File.ReadAllLines(userFilePath);
+                var pwdLines = File.ReadAllLines(pwdFilePath);
 
-                using (StreamWriter searchResultsFile = new StreamWriter(searchFilePath, false))
+                // 清空现有凭证
+                userCredentials.Clear();
+
+                // 加载新的凭证
+                for (int i = 0; i < Math.Min(userLines.Length, pwdLines.Length); i++)
                 {
-                    foreach (var matchingLine in matchingResults)
+                    if (!string.IsNullOrEmpty(userLines[i]) && !string.IsNullOrEmpty(pwdLines[i]))
                     {
-                        searchResultsFile.WriteLine(matchingLine);
-                    }
-                }
-
-                Console.WriteLine($"找到了 {matchingResults.Count} 条关于 \"{searchKeyword}\" 的记录日志, 我已保存(\"{searchFilePath}\"), 感觉良好.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"在搜索日志时发生异常 {ex}");
-                Log($"在搜索日志时发生异常 {ex}");
-            }
-        }
-
-        public void AddToWhiteList(string username)
-        {
-            try
-            {
-                lock (lockObject)
-                {
-                    if (!whiteListSet.Contains(username))
-                    {
-                        whiteListSet.Add(username);
-                        File.WriteAllLines(whiteListFilePath, whiteListSet);
-
-                        Console.WriteLine($"'{username}' 已添加到白名单.");
-                        Log($"'{username}' 已添加到白名单.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"'{username}' 已经在白名单里面了,不要重复添加.");
-                        Log($"'{username}' 已经在白名单里面了,不要重复添加.");
+                        userCredentials[userLines[i]] = pwdLines[i];
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"在添加到白名单时发生异常 {ex}");
-                Log($"在添加到白名单时发生异常 {ex}");
-            }
-        }
-
-        public void RemoveFromWhiteList(string username)
-        {
-            try
-            {
-                lock (lockObject)
-                {
-                    if (whiteListSet.Contains(username))
-                    {
-                        whiteListSet.Remove(username);
-                        File.WriteAllLines(whiteListFilePath, whiteListSet);
-
-                        Console.WriteLine($"'{username}' 已从白名单中移除.");
-                        Log($"'{username}' 已从白名单中移除.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"'{username}' 本来就不在白名单里面,不要重复移除.");
-                        Log($"'{username}' 本来就不在白名单里面,不要重复移除.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"在从白名单中移除用户时发生异常 {ex}");
-                Log($"在从白名单中移除用户时发生异常 {ex}");
-            }
-        }
-
-        public bool LetWhiteListUserJoin(string username)
-        {
-            if (isServerUseTheWhiteList)
-            {
-                try
-                {
-                    lock (lockObject)
-                    {
-                        return whiteListSet.Contains(username);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log($"在允许白名单用户加入时发生异常 {ex}");
-                    return false;
-                }
-            }
-            return true; // 如果未启用白名单模式，所有用户都可以加入
-        }
-
-        // Mod : ClientInfo, Des.: 原版含有的模组,用于存储客户端信息的核心类, Server前置模组
-        public class ClientInfo
-        {
-            public TcpClient TcpClient
-            {
-                get;
-                set;
-            }
-            private string _connectionMessage;
-
-            public string ConnectionMessage
-            {
-                get => _connectionMessage;
-                set
-                {
-                    _connectionMessage = value;
-                    Username = _connectionMessage.Split(':')[0];
-                }
-            }
-
-            public string Username
-            {
-                get;
-                set;
+                Log($"加载用户凭证时发生异常: {ex.Message}");
             }
         }
     }
