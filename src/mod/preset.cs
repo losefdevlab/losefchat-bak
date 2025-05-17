@@ -42,10 +42,10 @@ namespace LosefDevLab.LosefChat.lcstd
             if (lines.Length >= 4)
             {
                 ipvx = int.Parse(lines[0]);
-                ip = lines[1].Trim();
+                ip = lines[1];
                 port = int.Parse(lines[2]);
-                username = lines[3].Trim();
-                password = lines[4].Trim();
+                username = lines[3];
+                password = lines[4];
 
                 if (string.IsNullOrEmpty(username))
                 {
