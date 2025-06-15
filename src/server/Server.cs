@@ -17,7 +17,7 @@ namespace LosefDevLab.LosefChat.lcstd
         public TcpListener? tcpListener;
         public List<ClientInfo> clientList = new List<ClientInfo>();
         public object lockObject = new object();
-        public string logFilePath = "log.txt"; // Log file path
+        public string logFilePath = $"log{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt"; // Log file path
         public string searchFilePath = "search_results.txt"; // Search results file path
         public string bannedUsersFilePath = "banned_users.txt"; // Banned users file path
         public string whiteListFilePath = "white_list.txt"; // White list file path

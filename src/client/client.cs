@@ -17,7 +17,7 @@ namespace LosefDevLab.LosefChat.lcstd
         public TcpClient? tcpClient;
         public TcpClient? tcpClient2;
         public NetworkStream? clientStream;
-        public string logFilePath = "logclient.txt";
+        public string logFilePath = $"logclient{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
         public StreamWriter logFile;
         public string usernamecpy = "";
         private string inputFilePath = ".ci";
@@ -66,7 +66,7 @@ namespace LosefDevLab.LosefChat.lcstd
                 if (ipvx == 4)
                 {
                     Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。输入 'exit' 以关闭客户端。");
-                    Log("[Client] 尝试通过 IPv4 连接");
+                    Log($"[Client] 尝试通过 IPv4 连接{serverIP}:{serverPort}");
                     tcpClient = new TcpClient();
                     tcpClient.Connect(serverIP, serverPort);
                     clientStream = tcpClient.GetStream();
@@ -74,18 +74,18 @@ namespace LosefDevLab.LosefChat.lcstd
                     // 检查是否成功连接
                     if (tcpClient.Connected)
                     {
-                        Log("[Client] 成功通过 IPv4 连接到服务器");
+                        Log($"[Client] 成功通过 IPv4 连接到服务器{serverIP}:{serverPort}");
                     }
                     else
                     {
-                        Log("[Client] 通过 IPv4 连接服务器失败");
+                        Log($"[Client] 通过 IPv4 连接服务器失败{serverIP}:{serverPort}");
                         throw new Exception("IPv4 连接失败");
                     }
                 }
                 else if (ipvx == 6)
                 {
                     Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。输入 'exit' 以关闭客户端。");
-                    Log("[Client] 尝试通过 IPv6 连接");
+                    Log($"[Client] 尝试通过 IPv6 连接{serverIP}:{serverPort}");
                     tcpClient2 = new TcpClient(AddressFamily.InterNetworkV6);
                     tcpClient2.Connect(serverIP, serverPort);
                     clientStream = tcpClient2.GetStream();
@@ -93,11 +93,11 @@ namespace LosefDevLab.LosefChat.lcstd
                     // 检查是否成功连接
                     if (tcpClient2.Connected)
                     {
-                        Log("[Client] 成功通过 IPv6 连接到服务器");
+                        Log($"[Client] 成功通过 IPv6 连接到服务器{serverIP}:{serverPort}");
                     }
                     else
                     {
-                        Log("[Client] 通过 IPv6 连接服务器失败");
+                        Log($"[Client] 通过 IPv6 连接服务器失败{serverIP}:{serverPort}");
                         throw new Exception("IPv6 连接失败");
                     }
                 }
@@ -108,8 +108,8 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 SendMessage(password);
 
-                Console.WriteLine($"我({username})已连接到服务器。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
-                Log($"我({username})已连接到服务器。");
+                Console.WriteLine($"我({username})已连接到服务器({serverIP}:{serverPort})。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
+                Log($"我({username})已连接到服务器。server:{serverIP}:{serverPort}");
 
                 ThreadPool.QueueUserWorkItem(state => ReceiveMessage());
                 ThreadPool.QueueUserWorkItem(state => ProcessInput());
