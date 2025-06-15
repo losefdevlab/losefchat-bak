@@ -24,6 +24,13 @@ class Boot
         {
             while (true)
             {
+                Console.WriteLine(@"  _                             __    ____   _               _");
+                Console.WriteLine(@" | |       ___    ___    ___   / _|  / ___| | |__     __ _  | |_");
+                Console.WriteLine(@" | |      / _ \  / __|  / _ \ | |_  | |     | '_ \   / _` | | __|");
+                Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
+                Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
+                Console.WriteLine("------------------------------------------------------------------------------------------------------");
+                Console.WriteLine("LosefChat Client 纯输入模式");
                 Console.Write("> ");
                 string? cinp = Console.ReadLine();
                 if (cinp == "exit")
@@ -48,7 +55,13 @@ class Boot
         }
         else
         {
-            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b45\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine(@"  _                             __    ____   _               _");
+            Console.WriteLine(@" | |       ___    ___    ___   / _|  / ___| | |__     __ _  | |_");
+            Console.WriteLine(@" | |      / _ \  / __|  / _ \ | |_  | |     | '_ \   / _` | | __|");
+            Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
+            Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
+            Console.WriteLine("------------------------------------------------------------------------------------------------------");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b58\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
