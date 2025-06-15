@@ -147,7 +147,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 if (clientResponse != expectedResponse)
                 {
-                    Log($"[Auth] 非法客户端尝试连接{tcpClient.Client.RemoteEndPoint}，拒绝访问。");
+                    Log($"[Auth] 非法客户端{tcpClient.Client.RemoteEndPoint}尝试连接，拒绝访问。");
                     byte[] denyBytes = Encoding.UTF8.GetBytes("[AUTH:FAILED]");
                     tcpClient.GetStream().Write(denyBytes, 0, denyBytes.Length);
                     tcpClient.Close();
