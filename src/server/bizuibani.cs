@@ -27,6 +27,7 @@ namespace LosefDevLab.LosefChat.lcstd
                         Log($"用户 '{targetUsername}' 已被禁言.");
                         Console.WriteLine($"用户 '{targetUsername}' 已被禁言.");
 
+                        // 通知该用户已被禁言
                         ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
                         if (targetClient != null)
                         {
@@ -58,7 +59,7 @@ namespace LosefDevLab.LosefChat.lcstd
                         Log($"用户 '{targetUsername}' 已解除禁言.");
                         Console.WriteLine($"用户 '{targetUsername}' 已解除禁言.");
 
-
+                        // 通知该用户已解除禁言
                         ClientInfo targetClient = clientList.FirstOrDefault(c => c.Username == targetUsername);
                         if (targetClient != null)
                         {

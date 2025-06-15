@@ -41,10 +41,8 @@ namespace LosefDevLab.LosefChat.lcstd
 
         ~Client()
         {
+            // 关闭 StreamWriter
             logFile?.Close();
-            tcpClient?.Close();
-            tcpClient2?.Close();
-            clientStream?.Close();
         }
 
         public void Log(string message)
@@ -64,20 +62,44 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             try
             {
-                tcpClient = new TcpClient();
-                tcpClient2 = new TcpClient(AddressFamily.InterNetworkV6);
 
                 if (ipvx == 4)
                 {
-                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
+                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。输入 'exit' 以关闭客户端。");
+                    Log("[Client] 尝试通过 IPv4 连接");
+                    tcpClient = new TcpClient();
                     tcpClient.Connect(serverIP, serverPort);
                     clientStream = tcpClient.GetStream();
+
+                    // 检查是否成功连接
+                    if (tcpClient.Connected)
+                    {
+                        Log("[Client] 成功通过 IPv4 连接到服务器");
+                    }
+                    else
+                    {
+                        Log("[Client] 通过 IPv4 连接服务器失败");
+                        throw new Exception("IPv4 连接失败");
+                    }
                 }
                 else if (ipvx == 6)
                 {
-                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。\n输入 'exit' 以关闭客户端。");
+                    Console.WriteLine("正在连接, 如您长时间看到这个界面, 则是要么是被封，要么是网络问题, 要么是密码防破解把你ban了。输入 'exit' 以关闭客户端。");
+                    Log("[Client] 尝试通过 IPv6 连接");
+                    tcpClient2 = new TcpClient(AddressFamily.InterNetworkV6);
                     tcpClient2.Connect(serverIP, serverPort);
                     clientStream = tcpClient2.GetStream();
+
+                    // 检查是否成功连接
+                    if (tcpClient2.Connected)
+                    {
+                        Log("[Client] 成功通过 IPv6 连接到服务器");
+                    }
+                    else
+                    {
+                        Log("[Client] 通过 IPv6 连接服务器失败");
+                        throw new Exception("IPv6 连接失败");
+                    }
                 }
 
                 SendMessage(username);

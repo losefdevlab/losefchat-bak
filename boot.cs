@@ -14,20 +14,16 @@ class Boot
 {
     static void Main(string[] args)
     {
-        string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        string inputFilePath = Path.Combine(baseDirectory, ".ci");
+        string inputFilePath = ".ci";
+        if (!File.Exists(inputFilePath))
+        {
+            using (File.Create(inputFilePath)) { }
+        }
 
         if (args.Length > 0 && args[0] == "-ci")
         {
             while (true)
             {
-                Console.WriteLine(@"  _                             __    ____   _               _");
-                Console.WriteLine(@" | |       ___    ___    ___   / _|  / ___| | |__     __ _  | |_");
-                Console.WriteLine(@" | |      / _ \  / __|  / _ \ | |_  | |     | '_ \   / _` | | __|");
-                Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
-                Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
-                Console.WriteLine("------------------------------------------------------------------------------------------------------");
-                Console.WriteLine("LosefChat Client 纯输入模式");
                 Console.Write("> ");
                 string? cinp = Console.ReadLine();
                 if (cinp == "exit")
@@ -43,52 +39,32 @@ class Boot
                 }
                 else
                 {
-                    try
+                    using (StreamWriter sw = new StreamWriter(inputFilePath, true))
                     {
-                        using (StreamWriter sw = new StreamWriter(inputFilePath, true))
-                        {
-                            sw.WriteLine(cinp);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"写入.ci文件时发生异常: {ex.Message}");
+                        sw.WriteLine(cinp);
                     }
                 }
             }
         }
         else
         {
-            Console.WriteLine(@"  _                             __    ____   _               _");
-            Console.WriteLine(@" | |       ___    ___    ___   / _|  / ___| | |__     __ _  | |_");
-            Console.WriteLine(@" | |      / _ \  / __|  / _ \ | |_  | |     | '_ \   / _` | | __|");
-            Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
-            Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
-            Console.WriteLine("------------------------------------------------------------------------------------------------------");
-            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b55\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b45\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
                 {
                     Console.WriteLine("无效输入，请输入1、2或3。");
-                    continue;
+                    return;
                 }
 
                 if (choose == 1)
                 {
-                    try
-                    {
-                        Client client = new Client();
+                    Client client = new Client();
 
-                        Preset preset = new Preset();
-                        preset.ReadPreset();
+                    Preset preset = new Preset();
+                    preset.ReadPreset();
 
-                        client.Connect(preset.ipvx, preset.ip, preset.port, preset.username, preset.password);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"启动客户端时发生异常: {ex.Message}");
-                    }
+                    client.Connect(preset.ipvx, preset.ip, preset.port, preset.username, preset.password);
                 }
                 else if (choose == 2)
                 {
@@ -107,15 +83,9 @@ class Boot
                         }
                     }
 
-                    try
-                    {
-                        Server server = new Server(端口);
-                        server.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"启动服务器时发生异常: {ex.Message}");
-                    }
+                    Server server = new Server(端口);
+
+                    server.Start();
                 }
                 else if (choose == 3)
                 {

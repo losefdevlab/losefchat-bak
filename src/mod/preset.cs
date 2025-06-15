@@ -42,10 +42,15 @@ namespace LosefDevLab.LosefChat.lcstd
             if (lines.Length >= 4)
             {
                 ipvx = int.Parse(lines[0]);
+                Console.WriteLine("您的IP协议选择为: " + ipvx);
                 ip = lines[1];
+                Console.WriteLine("您的服务器IP地址为: " + ip);
                 port = int.Parse(lines[2]);
+                Console.WriteLine("您设置的端口号为: " + port);
                 username = lines[3];
+                Console.WriteLine("您设置的用户名为: " + username);
                 password = lines[4];
+                Console.WriteLine("您设置的密码为: " + password);
 
                 if (string.IsNullOrEmpty(username))
                 {
