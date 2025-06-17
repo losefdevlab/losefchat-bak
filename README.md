@@ -1,3 +1,6 @@
+### 按照LosefDevLab开发生命周期习惯规定，Losefchat (1)已经过完其开发生命周期，本存储库将进行归档
+### 但并不代表本项目停滞开发，项目的新部分将命名为Losefchat 2
+### 如果您想继续关注本项目的最新动态，请前往：github.com/losefdevlab/losefchat2
 # LosefChat | 一款简易的跨平台命令行聊天
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
