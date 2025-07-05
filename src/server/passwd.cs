@@ -4,8 +4,22 @@ namespace LosefDevLab.LosefChat.lcstd
     // Part : 密码
     public partial class Server
     {
+        /// <summary>
+        /// 用户信息文件路径，默认为user.txt
+        /// </summary>
         public string userFilePath = "user.txt";
+
+        /// <summary>
+        /// 密码存储文件路径，默认为pwd.txt
+        /// </summary>
         public string pwdFilePath = "pwd.txt";
+
+        /// <summary>
+        /// 验证用户身份有效性（包含锁定检查/新用户创建/密码验证逻辑）
+        /// </summary>
+        /// <param name="username">待验证的用户名</param>
+        /// <param name="password">待验证的密码</param>
+        /// <returns>验证结果（true=通过，false=拒绝）</returns>
         private bool IsUserValid(string username, string password)
         {
             // 检查用户是否被锁定
@@ -85,6 +99,12 @@ namespace LosefDevLab.LosefChat.lcstd
                 }
             }
         }
+
+        /// <summary>
+        /// 检查指定用户名是否可用（线程安全）
+        /// </summary>
+        /// <param name="username">待检查的用户名</param>
+        /// <returns>可用性状态（true=可用，false=已被占用）</returns>
         public bool IsUsernameAvailable(string username)
         {
             lock (lockObject)

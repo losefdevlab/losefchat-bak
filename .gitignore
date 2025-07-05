@@ -6,4 +6,6 @@ losefchat.sln
 *.editorconfig
 /.lingma
 /.vscode
+.idea
 preset.txt
+*.txt

@@ -1,38 +1,105 @@
-using System;
 using System.Text;
-using System.Threading;
 using System.Net.Sockets;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 
 namespace LosefDevLab.LosefChat.lcstd
 {
-    // Mod : Server, Des.: LC原版服务端核心类模组
-    // Part : Server主部分
+    /// <summary>
+    /// LC原版服务端核心类模组
+    /// </summary>
     public partial class Server
     {
+        /// <summary>
+        /// TCP监听器，用于接受客户端连接
+        /// </summary>
         public TcpListener? tcpListener;
+        
+        /// <summary>
+        /// 客户端连接信息集合，存储当前所有连接的客户端信息
+        /// </summary>
         public List<ClientInfo> clientList = new List<ClientInfo>();
+        
+        /// <summary>
+        /// 用于多线程同步的锁对象
+        /// </summary>
         public object lockObject = new object();
-        public string logFilePath = $"log{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt"; // Log file path
-        public string searchFilePath = "search_results.txt"; // Search results file path
-        public string bannedUsersFilePath = "banned_users.txt"; // Banned users file path
-        public string whiteListFilePath = "white_list.txt"; // White list file path
+        
+        /// <summary>
+        /// 日志文件路径，格式为logYYYYMMDD.txt
+        /// </summary>
+        public string logFilePath = $"log{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
+        
+        /// <summary>
+        /// 搜索结果文件路径
+        /// </summary>
+        public string searchFilePath = "search_results.txt";
+        
+        /// <summary>
+        /// 被封禁用户列表文件路径
+        /// </summary>
+        public string bannedUsersFilePath = "banned_users.txt";
+        
+        /// <summary>
+        /// 白名单文件路径
+        /// </summary>
+        public string whiteListFilePath = "white_list.txt";
+        
+        /// <summary>
+        /// 输出缓存文件路径
+        /// </summary>
         public string scacheFilePath = "outputcache.txt";
+        
+        /// <summary>
+        /// 聊天日志文件路径
+        /// </summary>
+        public string chatLogFilePath = "chatlog.txt";
+        
+        /// <summary>
+        /// 被封禁用户集合，用于快速查找验证
+        /// </summary>
         public HashSet<string> bannedUsersSet;
+        
+        /// <summary>
+        /// 白名单用户集合，用于快速查找验证
+        /// </summary>
         public HashSet<string> whiteListSet;
-
+        
+        /// <summary>
+        /// 日志缓存同步锁对象（private readonly）
+        /// </summary>
         private readonly object _cacheLock = new object();
+        
+        /// <summary>
+        /// 日志缓存列表，用于批量写入文件
+        /// </summary>
         private readonly List<string> _logCache = new List<string>();
+        
+        /// <summary>
+        /// 日志刷新定时器（private readonly）
+        /// </summary>
         private readonly Timer? _flushTimer;
-        private int _messageTokens = 7200; // 每小时最大消息数(m = message tokens, 7.2km/s)
+        
+        /// <summary>
+        /// 消息令牌计数器，用于限制消息发送速率
+        /// </summary>
+        private int _messageTokens = 7200;
+        
+        /// <summary>
+        /// 消息令牌同步锁对象（private readonly）
+        /// </summary>
         private readonly object _tokenLock = new object();
+        
+        /// <summary>
+        /// 消息令牌补充定时器（private readonly）
+        /// </summary>
         private Timer? _tokenRefillTimer;
 
+        /// <summary>
+        /// 初始化服务器实例
+        /// </summary>
+        /// <param name="port">监听的端口号</param>
         public Server(int port)
         {
             Log($"Server port was set to {port}.");
@@ -77,12 +144,19 @@ namespace LosefDevLab.LosefChat.lcstd
             _flushTimer = new Timer(FlushCache, null, TimeSpan.Zero, TimeSpan.FromSeconds(0.5));
             _tokenRefillTimer = new Timer(RefillTokens, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
         }
+
+        /// <summary>
+        /// 停止服务器运行
+        /// </summary>
         public void Stop()
         {
             tcpListener?.Stop();
             Log("服务器核心已关闭.");
         }
 
+        /// <summary>
+        /// 启动服务器并开始监听客户端连接
+        /// </summary>
         public void Start()
         {
             Log("Server loading...");
@@ -103,7 +177,6 @@ namespace LosefDevLab.LosefChat.lcstd
             }
             bannedUsersSet = File.ReadAllLines(bannedUsersFilePath).ToHashSet();
 
-            // Create or read white list file
             if (!File.Exists(whiteListFilePath))
             {
                 using (File.Create(whiteListFilePath)) { }
@@ -133,7 +206,6 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 TcpClient tcpClient = tcpListener.AcceptTcpClient();
 
-                // 发送 Challenge
                 string nonce = Guid.NewGuid().ToString("N").Substring(0, 16);
                 byte[] challengeBytes = Encoding.UTF8.GetBytes($"[CHALLENGE]{nonce}");
                 tcpClient.GetStream().Write(challengeBytes, 0, challengeBytes.Length);
@@ -142,7 +214,7 @@ namespace LosefDevLab.LosefChat.lcstd
                 int bytesRead = tcpClient.GetStream().Read(responseBytes, 0, responseBytes.Length);
                 string clientResponse = Encoding.UTF8.GetString(responseBytes, 0, bytesRead).Trim();
 
-                string secretKey = "losefchat-client-secret-key";// 验证是否为非法客户端的私钥
+                string secretKey = "losefchat-client-secret-key";
                 string expectedResponse = ComputeSHA256Hash(nonce + secretKey);
 
                 if (clientResponse != expectedResponse)
@@ -161,12 +233,10 @@ namespace LosefDevLab.LosefChat.lcstd
                     tcpClient.GetStream().Flush();
                 }
 
-                // 接收用户名
                 byte[] usernameBytes = new byte[32567];
                 int usernameBytesRead = tcpClient.GetStream().Read(usernameBytes, 0, 32567);
                 string username = Encoding.UTF8.GetString(usernameBytes, 0, usernameBytesRead).Trim();
 
-                // 接收密码
                 byte[] passwordBytes = new byte[32567];
                 int passwordBytesRead = tcpClient.GetStream().Read(passwordBytes, 0, 32567);
                 string password = Encoding.UTF8.GetString(passwordBytes, 0, passwordBytesRead).Trim();
@@ -192,6 +262,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 处理客户端通信
+        /// </summary>
+        /// <param name="clientInfoObj">客户端信息对象</param>
         public void HandleClientCommunication(object clientInfoObj)
         {
             try
@@ -269,6 +343,11 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 向所有客户端广播消息
+        /// </summary>
+        /// <param name="message">要广播的消息内容</param>
+        /// <param name="senderUsername">消息发送者用户名</param>
         public void BroadcastMessage(string message, string senderUsername = "")
         {
             if (message.Trim() != "")
@@ -302,6 +381,8 @@ namespace LosefDevLab.LosefChat.lcstd
                         }
                     }
                     Log(message);
+                    
+                    File.AppendAllText(chatLogFilePath,$"{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}" + message + Environment.NewLine);
                 }
                 else
                 {
@@ -309,6 +390,11 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 向指定客户端发送消息
+        /// </summary>
+        /// <param name="clientInfo">目标客户端信息</param>
+        /// <param name="message">消息内容</param>
         public void SendMessage(ClientInfo clientInfo, string message)
         {
             if (message.Trim() != "")
@@ -318,10 +404,14 @@ namespace LosefDevLab.LosefChat.lcstd
                 clientInfo.TcpClient.GetStream().Flush();
             }
             else
-            { // nothing to do 
+            { 
             }
         }
 
+        /// <summary>
+        /// 封禁用户
+        /// </summary>
+        /// <param name="targetUsername">要封禁的用户名</param>
         public void BanUser(string targetUsername)
         {
             try
@@ -351,6 +441,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 踢出被封禁的用户
+        /// </summary>
+        /// <param name="targetUsername">要踢出的用户名</param>
         public void KickBannedUser(string targetUsername)
         {
             try
@@ -382,6 +476,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 踢出指定用户
+        /// </summary>
+        /// <param name="targetUsername">要踢出的用户名</param>
         public void KickUser(string targetUsername)
         {
             try
@@ -399,12 +497,10 @@ namespace LosefDevLab.LosefChat.lcstd
 
                         clientList.Remove(targetClient);
 
-                        // Close the connection with the kicked out user
                         targetClient.TcpClient.Close();
                     }
                     else
                     {
-                        // If user does not exist, log invalid user message to the log file
                         Log($"'{targetUsername}' 这人我寻思着也不在线啊怎么踢？");
                     }
                 }
@@ -416,6 +512,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 解封用户
+        /// </summary>
+        /// <param name="targetUsername">要解封的用户名</param>
         public void UnbanUser(string targetUsername)
         {
             try
@@ -426,12 +526,10 @@ namespace LosefDevLab.LosefChat.lcstd
                     {
                         bannedUsersSet.Remove(targetUsername);
 
-                        // Update banned users file
                         File.WriteAllLines(bannedUsersFilePath, bannedUsersSet);
 
                         Console.WriteLine($"'{targetUsername}' 出狱了");
 
-                        // Log unban operation to the log file
                         Log($"'{targetUsername}' 经服务器官方批准,出狱");
                     }
                     else
@@ -447,7 +545,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        public void DisplayAllUsers()//显示所有用户
+        /// <summary>
+        /// 显示所有在线用户
+        /// </summary>
+        public void DisplayAllUsers()
         {
             try
             {
@@ -456,7 +557,7 @@ namespace LosefDevLab.LosefChat.lcstd
                     Console.WriteLine("当前在线用户:");
                     foreach (var client in clientList)
                     {
-                        Console.WriteLine("    " + client.Username);//在这里遍历然后显示
+                        Console.WriteLine("    " + client.Username);
                     }
                 }
             }
@@ -464,9 +565,13 @@ namespace LosefDevLab.LosefChat.lcstd
             {
                 Console.WriteLine($"在投影当前在线用户的时候发生异常 {ex}");
                 Log($"在投影当前在线用户的时候发生异常 {ex}");
-            }//我还是太谨慎了这玩意可能永远都不会触发
+            }
         }
 
+        /// <summary>
+        /// 将用户添加到白名单
+        /// </summary>
+        /// <param name="username">要添加的用户名</param>
         public void AddToWhiteList(string username)
         {
             try
@@ -506,6 +611,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 从白名单中移除用户
+        /// </summary>
+        /// <param name="username">要移除的用户名</param>
         public void RemoveFromWhiteList(string username)
         {
             try
@@ -545,6 +654,9 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 允许白名单用户加入服务器
+        /// </summary>
         public void LetWhiteListUserJoin()
         {
             try
@@ -563,10 +675,13 @@ namespace LosefDevLab.LosefChat.lcstd
             }
             catch (Exception ex)
             {
-                Log($"[WhiteList] 在允许白名单用户加入时发生异常 {ex}"); // 增加详细日志输出
+                Log($"[WhiteList] 在允许白名单用户加入时发生异常 {ex}");
             }
         }
 
+        /// <summary>
+        /// 处理控制台输入命令
+        /// </summary>
         public void ReadConsoleInput()
         {
             while (true)
@@ -618,12 +733,12 @@ namespace LosefDevLab.LosefChat.lcstd
                     string targetUsername = input.Split(' ')[1];
                     UnbanUser(targetUsername);
                 }
-                else if (input.StartsWith("/mute")) // 禁言命令
+                else if (input.StartsWith("/mute"))
                 {
                     string targetUsername = input.Split(' ')[1];
                     MuteUser(targetUsername);
                 }
-                else if (input.StartsWith("/unmute")) // 解禁言命令
+                else if (input.StartsWith("/unmute"))
                 {
                     string targetUsername = input.Split(' ')[1];
                     UnmuteUser(targetUsername);
@@ -704,6 +819,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 记录日志信息
+        /// </summary>
+        /// <param name="message">要记录的日志内容</param>
         public void Log(string message)
         {
             try
@@ -725,8 +844,13 @@ namespace LosefDevLab.LosefChat.lcstd
                 Log($"Error in cache log file: {ex.Message}");
             }
         }
+
         private readonly object _fileLock = new object();
 
+        /// <summary>
+        /// 定时刷新日志缓存到文件
+        /// </summary>
+        /// <param name="state">定时器状态对象</param>
         private void FlushCache(object? state)
         {
             List<string> logsToWrite;
@@ -741,7 +865,6 @@ namespace LosefDevLab.LosefChat.lcstd
             {
                 try
                 {
-                    // 写入主日志文件
                     lock (_fileLock)
                     {
                         using (StreamWriter logFile = new StreamWriter(logFilePath, true))
@@ -753,7 +876,6 @@ namespace LosefDevLab.LosefChat.lcstd
                         }
                     }
 
-                    // 写入缓存文件
                     lock (_fileLock)
                     {
                         using (StreamWriter cacheFile = new StreamWriter(scacheFilePath, true))
@@ -772,6 +894,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 定时补充消息令牌
+        /// </summary>
+        /// <param name="state">定时器状态对象</param>
         private void RefillTokens(object? state)
         {
             lock (_tokenLock)
@@ -781,6 +907,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 搜索日志文件中的关键字
+        /// </summary>
+        /// <param name="searchKeyword">要搜索的关键字</param>
         public void SearchLog(string searchKeyword)
         {
             try
@@ -796,7 +926,7 @@ namespace LosefDevLab.LosefChat.lcstd
                     }
                 }
 
-                Console.WriteLine($"找到了 {matchingResults.Count} 条关于 \"{searchKeyword}\" 的记录日志, 我已保存(\"{searchFilePath}\"), 感觉良好.");
+                Console.WriteLine($"找到了 {matchingResults.Count} 条关于 \"{searchKeyword}\" 的记录日志, 我已保存(\"{searchFilePath}\"), 感觉良好。");
             }
             catch (Exception ex)
             {
@@ -805,6 +935,11 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 计算SHA256哈希值
+        /// </summary>
+        /// <param name="input">输入字符串</param>
+        /// <returns>哈希值字符串</returns>
         private string ComputeSHA256Hash(string input)
         {
             using (SHA256 sha256 = SHA256.Create())
@@ -816,7 +951,9 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
-        // Mod : ClientInfo, Des.: 原版含有的模组,用于存储客户端信息的核心类, Server前置模组
+        /// <summary>
+        /// 存储客户端信息的核心类
+        /// </summary>
         public class ClientInfo
         {
             public TcpClient TcpClient

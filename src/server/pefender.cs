@@ -15,10 +15,26 @@ namespace LosefDevLab.LosefChat.lcstd
 {
     public partial class Server
     {
+        /// <summary>
+        /// 存储被锁定用户的用户名与解锁时间的字典
+        /// </summary>
         private Dictionary<string, DateTime> lockedUsers = new Dictionary<string, DateTime>();
+
+        /// <summary>
+        /// 存储用户登录尝试次数的字典
+        /// </summary>
         private Dictionary<string, int> loginAttempts = new Dictionary<string, int>();
+
+        /// <summary>
+        /// 存储用户最后登录尝试时间的字典
+        /// </summary>
         private Dictionary<string, DateTime> lastAttemptTime = new Dictionary<string, DateTime>();
-        private void ResetLoginAttempts(object? state) // 重置尝试次数
+
+        /// <summary>
+        /// 定时重置登录尝试次数的方法
+        /// </summary>
+        /// <param name="state">定时器状态对象(未使用)</param>
+        private void ResetLoginAttempts(object? state)
         {
             lock (lockObject)
             {

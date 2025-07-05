@@ -13,13 +13,35 @@ namespace LosefDevLab.LosefChat.lcstd
 
     public partial class Preset
     {
+        /// <summary>
+        /// 获取或设置IP协议版本(4或6)
+        /// </summary>
         public int ipvx;
+        /// <summary>
+        /// 获取或设置服务器IP地址
+        /// </summary>
         public string ip;
+        /// <summary>
+        /// 获取或设置服务器端口号
+        /// </summary>
         public int port;
+        /// <summary>
+        /// 获取或设置用户名
+        /// </summary>
         public string username;
+        /// <summary>
+        /// 获取或设置用户密码
+        /// </summary>
         public string password;
 
+        /// <summary>
+        /// 预设文件路径
+        /// </summary>
         public string presetFilePath = "preset";
+
+        /// <summary>
+        /// 从预设文件中读取连接配置并进行有效性验证
+        /// </summary>
         public void ReadPreset() // 读取预设
         {
             while (true)

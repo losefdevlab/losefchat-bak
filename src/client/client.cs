@@ -1,12 +1,5 @@
-using System;
 using System.Text;
-using System.Threading;
 using System.Net.Sockets;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Numerics;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace LosefDevLab.LosefChat.lcstd
@@ -15,28 +8,62 @@ namespace LosefDevLab.LosefChat.lcstd
     // Part : Client主部分
     public partial class Client
     {
+        /// <summary>
+        /// 获取或设置TCP客户端实例
+        /// </summary>
         public TcpClient? tcpClient;
+        /// <summary>
+        /// 获取或设置备用TCP客户端实例
+        /// </summary>
         public TcpClient? tcpClient2;
+        /// <summary>
+        /// 获取或设置网络流实例
+        /// </summary>
         public NetworkStream? clientStream;
+        /// <summary>
+        /// 获取日志文件路径
+        /// </summary>
         public string logFilePath = $"logclient{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
+        /// <summary>
+        /// 获取日志文件写入器
+        /// </summary>
         public StreamWriter logFile;
+        /// <summary>
+        /// 获取用户名副本
+        /// </summary>
         public string usernamecpy = "";
+        /// <summary>
+        /// 输入文件路径
+        /// </summary>
         private string inputFilePath = ".ci";
+        /// <summary>
+        /// 聊天日志命令标识符
+        /// </summary>
+        private const string ChatLogCommand = "[GETCHATLOG]";
 
+        /// <summary>
+        /// 初始化Client类的新实例
+        /// </summary>
         public Client()
         {
             if (!File.Exists(logFilePath))
             {
-                using (File.Create(logFilePath)) { }
+                using (File.Create(logFilePath))
+                {
+                }
             }
+
             if (!File.Exists(inputFilePath))
             {
-                using (File.Create(inputFilePath)) { }
+                using (File.Create(inputFilePath))
+                {
+                }
             }
             else
             {
                 File.WriteAllText(inputFilePath, string.Empty);
             }
+
             logFile = new StreamWriter(logFilePath, true);
         }
 
@@ -46,6 +73,10 @@ namespace LosefDevLab.LosefChat.lcstd
             logFile?.Close();
         }
 
+        /// <summary>
+        /// 记录日志信息到文件
+        /// </summary>
+        /// <param name="message">要记录的消息内容</param>
         public void Log(string message)
         {
             if (message.Trim() != "")
@@ -59,6 +90,14 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 连接到指定的聊天服务器
+        /// </summary>
+        /// <param name="ipvx">IP版本(4或6)</param>
+        /// <param name="serverIP">服务器IP地址</param>
+        /// <param name="serverPort">服务器端口</param>
+        /// <param name="username">用户名称</param>
+        /// <param name="password">用户密码</param>
         public void Connect(int ipvx, string serverIP, int serverPort, string username, string password)
         {
             try
@@ -118,7 +157,7 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     Log($"[Prove] 服务端{serverIP}:{serverPort}将会验证你现在使用的客户端是否为他们定义的非法客户端");
                     string nonce = challenge.Replace("[CHALLENGE]", "").Trim();
-                    string secretKey = "losefchat-client-secret-key";// 这里需要和服务端的对应证明客户端不非法的私钥一模一样
+                    string secretKey = "losefchat-client-secret-key"; // 这里需要和服务端的对应证明客户端不非法的私钥一模一样
                     string response = ComputeSHA256Hash(nonce + secretKey);
 
                     byte[] responseBytes = Encoding.UTF8.GetBytes(response);
@@ -132,11 +171,13 @@ namespace LosefDevLab.LosefChat.lcstd
                     if (authStatus != "[AUTH:OK]")
                     {
                         Console.WriteLine("验证失败：服务端认为你是非法客户端，如果你这个并不是非法客户端，请看看有什么其他地方会让服务端识别你为非法客户端");
-                        Log($"[Prove Finished unsuccessfully] 验证失败：服务端认为你是非法客户端，如果你这个并不是非法客户端，请看看有什么其他地方会让服务端识别你为非法客户端");
+                        Log(
+                            $"[Prove Finished unsuccessfully] 验证失败：服务端认为你是非法客户端，如果你这个并不是非法客户端，请看看有什么其他地方会让服务端识别你为非法客户端");
                         tcpClient?.Close();
                         tcpClient2?.Close();
                         return;
                     }
+
                     Log($"[Prove Finished successfully] 证明成功!");
                 }
 
@@ -148,7 +189,8 @@ namespace LosefDevLab.LosefChat.lcstd
                 SendMessage(password);
                 Log($"[Connect] 已发送密码");
 
-                Console.WriteLine($"我({username})已加入到服务器({serverIP}:{serverPort})。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
+                Console.WriteLine(
+                    $"我({username})已加入到服务器({serverIP}:{serverPort})。输入 'exit' 以关闭客户端。\n您的消息发送速度过快的话服务端可能会限制速度");
                 Log($"[Connect Finished successfully]我({username})已加入到服务器。server:{serverIP}:{serverPort}");
 
                 ThreadPool.QueueUserWorkItem(state => ReceiveMessage());
@@ -160,19 +202,29 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 处理客户端输入文件的线程方法
+        /// </summary>
         private void ProcessInput()
         {
             while (true)
             {
-                using (FileStream fileStream = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (FileStream fileStream =
+                       new FileStream(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 using (StreamReader reader = new StreamReader(fileStream))
                 {
                     string msg = reader.ReadToEnd();
                     if (!string.IsNullOrEmpty(msg))
                     {
                         if (msg.Trim() != "" && msg != "exit") SendMessage(msg);
-                        else if (msg.Trim() == "exit") { SendMessage("我下线了拜拜"); Environment.Exit(0); }
-                        using (FileStream fileStreamWrite = new FileStream(inputFilePath, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite))
+                        else if (msg.Trim() == "exit")
+                        {
+                            SendMessage("我下线了拜拜");
+                            Environment.Exit(0);
+                        }
+
+                        using (FileStream fileStreamWrite = new FileStream(inputFilePath, FileMode.Truncate,
+                                   FileAccess.Write, FileShare.ReadWrite))
                         {
                         }
                     }
@@ -182,6 +234,9 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 接收服务器消息的线程方法
+        /// </summary>
         public void ReceiveMessage()
         {
             byte[] message = new byte[32567];
@@ -212,6 +267,10 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 向服务器发送消息
+        /// </summary>
+        /// <param name="message">要发送的消息内容</param>
         public void SendMessage(string message)
         {
             if (message.Trim() != "")
@@ -224,6 +283,11 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 计算SHA256哈希值
+        /// </summary>
+        /// <param name="input">输入字符串</param>
+        /// <returns>十六进制格式的哈希字符串</returns>
         private string ComputeSHA256Hash(string input)
         {
             using (SHA256 sha256 = SHA256.Create())

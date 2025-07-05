@@ -1,11 +1,3 @@
-using System;
-using System.Text;
-using System.Threading;
-using System.Net.Sockets;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
 using LosefDevLab.LosefChat.lcstd;
 using System.Runtime.InteropServices;
 
@@ -61,7 +53,7 @@ class Boot
             Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
             Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
             Console.WriteLine("------------------------------------------------------------------------------------------------------");
-            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b61\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT");
+            Console.WriteLine("欢迎使用LosefChat v3.0.r3.b66\n客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT,输入4发行说明");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
@@ -103,6 +95,17 @@ class Boot
                 else if (choose == 3)
                 {
                     Environment.Exit(0);
+                }
+                else if (choose == 4)
+                {
+                    Console.WriteLine(@"Losefchat 3.0.r3.b66 发行说明：");
+                    Console.WriteLine(@"-------------------------------------");
+                    Console.WriteLine(@"现在更方便于开发者开发，因为我们添加了IDE智能信息提示");
+                    Console.WriteLine(@"并且我们添加了发行说明，现在您完全不必去github查看发行说明");
+                    Console.WriteLine(@"-------------------------------------");
+                    Console.WriteLine(@"GitHub：https://github.com/losefdevlab/losefchat");
+                    Console.WriteLine(@"Email:along-losef@outlook.com");
+                    
                 }
                 else
                 {

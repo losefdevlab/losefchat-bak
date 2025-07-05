@@ -14,7 +14,16 @@ namespace LosefDevLab.LosefChat.lcstd
 
     public partial class Server
     {
+        /// <summary>
+        /// 存储当前被禁言用户的用户名集合（线程安全）
+        /// </summary>
         public HashSet<string> mutedUsersSet = new HashSet<string>();
+
+        /// <summary>
+        /// 将指定用户加入禁言列表并发送通知（线程安全）
+        /// </summary>
+        /// <param name="targetUsername">需要禁言的用户名</param>
+        /// <exception cref="Exception">记录并捕获所有异常信息"></exception>
         public void MuteUser(string targetUsername)
         {
             try
@@ -47,6 +56,11 @@ namespace LosefDevLab.LosefChat.lcstd
             }
         }
 
+        /// <summary>
+        /// 从禁言列表中移除指定用户并发送通知（线程安全）
+        /// </summary>
+        /// <param name="targetUsername">需要解除禁言的用户名</param>
+        /// <exception cref="Exception">记录并捕获所有异常信息"></exception>
         public void UnmuteUser(string targetUsername)
         {
             try
