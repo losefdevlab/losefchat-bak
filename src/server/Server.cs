@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
-
+using System.Buffers;
 namespace LosefDevLab.LosefChat.lcstd
 {
     /// <summary>
@@ -77,6 +77,11 @@ namespace LosefDevLab.LosefChat.lcstd
         private readonly List<string> _logCache = new List<string>();
         
         /// <summary>
+        /// 最大日志缓存条目数
+        /// </summary>
+        private const int MaxLogCacheSize = 500;
+        
+        /// <summary>
         /// 日志刷新定时器（private readonly）
         /// </summary>
         private readonly Timer? _flushTimer;
@@ -95,6 +100,11 @@ namespace LosefDevLab.LosefChat.lcstd
         /// 消息令牌补充定时器（private readonly）
         /// </summary>
         private Timer? _tokenRefillTimer;
+        
+        /// <summary>
+        /// 静态缓冲区池，用于减少内存分配
+        /// </summary>
+        private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Create(32567, 10);
 
         /// <summary>
         /// 初始化服务器实例
@@ -339,12 +349,20 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     clientList.Remove(clientInfo);
                 }
-                BroadcastMessage($"{clientInfo.Username} 下线.");
+                BroadcastMessage($"{clientInfo.Username} 下线.", clientInfo.Username);
                 tcpClient.Close();
             }
             catch (Exception ex)
             {
                 Log($"处理用户通信时发生异常: {ex.Message}");
+            }
+            finally
+            {
+                // 确保资源释放
+                if (clientInfoObj is ClientInfo clientInfo)
+                {
+                    clientInfo.TcpClient?.Close();
+                }
             }
         }
 
@@ -355,22 +373,27 @@ namespace LosefDevLab.LosefChat.lcstd
         /// <param name="senderUsername">消息发送者用户名</param>
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            if (message.Trim() != "")
+            if (message.Trim() == "")
+                return;
+
+            bool canSendMessage = false;
+            lock (_tokenLock)
             {
-                bool canSendMessage = false;
-                lock (_tokenLock)
+                if (_messageTokens > 0)
                 {
-                    if (_messageTokens > 0)
-                    {
-                        _messageTokens--;
-                        canSendMessage = true;
-                    }
+                    _messageTokens--;
+                    canSendMessage = true;
                 }
+            }
 
-                if (canSendMessage)
+            if (canSendMessage)
+            {
+                // 使用缓冲池减少内存分配
+                byte[] broadcastBytes = _bufferPool.Rent(message.Length * 2);
+                try
                 {
-                    byte[] broadcastBytes = Encoding.UTF8.GetBytes(message);
-
+                    int byteCount = Encoding.UTF8.GetBytes(message, 0, message.Length, broadcastBytes, 0);
+                    
                     lock (lockObject)
                     {
                         foreach (var client in clientList)
@@ -381,15 +404,17 @@ namespace LosefDevLab.LosefChat.lcstd
                             }
 
                             NetworkStream clientStream = client.TcpClient.GetStream();
-                            clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                            clientStream.Write(broadcastBytes, 0, byteCount);
                             clientStream.Flush();
                         }
                     }
-                    Log(message);
                 }
-                else
+                finally
                 {
+                    _bufferPool.Return(broadcastBytes);
                 }
+                
+                Log(message);
             }
         }
 
@@ -400,15 +425,12 @@ namespace LosefDevLab.LosefChat.lcstd
         /// <param name="message">消息内容</param>
         public void SendMessage(ClientInfo clientInfo, string message)
         {
-            if (message.Trim() != "")
-            {
-                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-                clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
-                clientInfo.TcpClient.GetStream().Flush();
-            }
-            else
-            { 
-            }
+            if (message.Trim() == "")
+                return;
+
+            byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+            clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
+            clientInfo.TcpClient.GetStream().Flush();
         }
 
         /// <summary>
@@ -830,13 +852,19 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             try
             {
-                if (message.Trim() != "")
+                if (message.Trim() == "")
+                    return;
+
+                lock (_cacheLock)
                 {
-                    lock (_cacheLock)
+                    foreach (var line in message.Split('\n'))
                     {
-                        foreach (var line in message.Split('\n'))
+                        _logCache.Add($"{DateTime.Now}: {line}");
+                        
+                        // 当日志缓存超过最大容量时立即刷新
+                        if (_logCache.Count >= MaxLogCacheSize)
                         {
-                            _logCache.Add($"{DateTime.Now}: {line}");
+                            FlushCache(null);
                         }
                     }
                 }
