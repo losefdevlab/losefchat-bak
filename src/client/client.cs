@@ -36,10 +36,10 @@ namespace LosefDevLab.LosefChat.lcstd
         /// 输入文件路径
         /// </summary>
         private string inputFilePath = ".ci";
-        /// <summary>
-        /// 聊天日志命令标识符
-        /// </summary>
-        private const string ChatLogCommand = "[GETCHATLOG]";
+        /// <summary>服务器名称存储</summary>
+        private string serverName = "";
+        /// <summary>服务器描述存储</summary>
+        private string serverDes = "";
 
         /// <summary>
         /// 初始化Client类的新实例
@@ -203,7 +203,7 @@ namespace LosefDevLab.LosefChat.lcstd
         }
 
         /// <summary>
-        /// 处理客户端输入文件的线程方法
+        /// 处理客户端输入、客户端命令的线程方法
         /// </summary>
         private void ProcessInput()
         {
@@ -221,6 +221,11 @@ namespace LosefDevLab.LosefChat.lcstd
                         {
                             SendMessage("我下线了拜拜");
                             Environment.Exit(0);
+                        }
+                        else if (msg.Trim() == "serverinfo")
+                        {
+                            Console.WriteLine("服务器名称 | "+serverName);
+                            Console.WriteLine("服务器描述 | "+serverDes);
                         }
 
                         using (FileStream fileStreamWrite = new FileStream(inputFilePath, FileMode.Truncate,
@@ -241,7 +246,12 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             byte[] message = new byte[32567];
             int bytesRead;
-
+            bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
+            serverName = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
+            Log("服务器名称:"+serverName);
+            bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
+            serverDes = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
+            Log("服务器描述:"+serverDes);
             List<string> messages = new List<string>();
             while (true)
             {

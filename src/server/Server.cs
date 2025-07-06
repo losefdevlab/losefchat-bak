@@ -11,6 +11,11 @@ namespace LosefDevLab.LosefChat.lcstd
     /// </summary>
     public partial class Server
     {
+        /// <summary>服务器名称</summary>
+        private string serverName = "Losefchatserver";
+        /// <summary>服务器描述</summary>
+        private string serverDescription = "A LosefChat Server";
+        
         /// <summary>
         /// TCP监听器，用于接受客户端连接
         /// </summary>
@@ -50,11 +55,6 @@ namespace LosefDevLab.LosefChat.lcstd
         /// 输出缓存文件路径
         /// </summary>
         public string scacheFilePath = "outputcache.txt";
-        
-        /// <summary>
-        /// 聊天日志文件路径
-        /// </summary>
-        public string chatLogFilePath = "chatlog.txt";
         
         /// <summary>
         /// 被封禁用户集合，用于快速查找验证
@@ -100,8 +100,10 @@ namespace LosefDevLab.LosefChat.lcstd
         /// 初始化服务器实例
         /// </summary>
         /// <param name="port">监听的端口号</param>
-        public Server(int port)
+        public Server(int port,string sn, string sd)
         {
+            serverName = sn;
+            serverDescription = sd;
             Log($"Server port was set to {port}.");
             File.WriteAllText(scacheFilePath, string.Empty);
             if (!File.Exists(userFilePath))
@@ -254,7 +256,10 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     clientList.Add(clientInfo);
                 }
-
+                SendMessage(clientInfo,serverName);
+                Thread.Sleep(100);
+                SendMessage(clientInfo,serverDescription);
+                Thread.Sleep(400);
                 BroadcastMessage($"{clientInfo.Username} 加入了服务器");
 
                 Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClientCommunication));
@@ -381,8 +386,6 @@ namespace LosefDevLab.LosefChat.lcstd
                         }
                     }
                     Log(message);
-                    
-                    File.AppendAllText(chatLogFilePath,$"{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}" + message + Environment.NewLine);
                 }
                 else
                 {

@@ -8,9 +8,9 @@ using System.Net;
 
 namespace LosefDevLab.LosefChat.lcstd
 {
-    // Mod : Preset, Des.: LC原版客户端预设工具模组
-    // Part : 预设部分
-
+/// <summary>
+/// LC原版内含客户端预设工具
+/// </summary>
     public partial class Preset
     {
         /// <summary>
