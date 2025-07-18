@@ -1,4 +1,4 @@
-# LosefChat | 一款简易的跨平台命令行聊天
+# LosefChat | 一款简易的跨桌面平台命令行聊天
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
@@ -19,6 +19,7 @@ XFCSTD PATH:/XFCSTD2.md
 
 ## 1 主要内容
 
+- 🖥️跨桌面平台
 - 1️⃣模块化
 - 🧩支持MOD
 - 🛜IPV4/IPV6
@@ -31,6 +32,8 @@ XFCSTD PATH:/XFCSTD2.md
 - 😊良好的UUE(User Use Experience, 用户使用体验)
 - 📱服务端管理
 - ⬆️开放, 自由
+> [!IMPORTANT]
+> 适用于任何桌面端平台，但目前已知不适用于Android平台。LosefChat可能不会在移动端平台成功编译或运行
 
 ## 2 部署极其方便
 

@@ -32,7 +32,7 @@ namespace LosefDevLab.LosefChat.lcstd
         public object lockObject = new object();
         
         /// <summary>
-        /// 日志文件路径，格式为logYYYYMMDD.txt
+        /// 日志文件路径，名字为logYYYYMMDD.txt
         /// </summary>
         public string logFilePath = $"log{DateTime.Now:yyyy}{DateTime.Now:MM}{DateTime.Now:dd}.txt";
         
