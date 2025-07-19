@@ -1,7 +1,12 @@
 # LosefChat | 一款简易的跨桌面平台命令行聊天
+
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
+
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
+
+CTCC社区*创作内容 - 自由创作性质
 
 主要开发：阿龙<br>
 Copyright (C) 2025 **LosefDevLab**<br>
@@ -13,14 +18,21 @@ Copyright (C) 2024-2025 **PPPO Technological Team(PTT)**<br>
 
 Losefchat (2025) by LosefChat开发团队 2025-Now freedom-create in XFCSTD2.<br>
 
-XFCSTD PATH:/XFCSTD2.md
+XFCSTD PATH:/XFCSTD2.md<br>
 
-> **注意**：本项目需要自行编译，请参考文末的编译指南。<br>
 
-## 1 主要内容
+> **注意**：本项目需要自行编译，请参考“如何编译？”H2标题处。<br>
+>
+> 注意：本项目的操作请参考“如何使用？”H2标题处。
+
+## License
+
+LosefChat 使用 MIT License
+
+## 主要内容
 
 - 🖥️跨桌面平台
-- 1️⃣模块化
+- 1️⃣模块化°
 - 🧩支持MOD
 - 🛜IPV4/IPV6
 - 🛡️给开发者提供了安全通讯工具
@@ -28,30 +40,15 @@ XFCSTD PATH:/XFCSTD2.md
 - 🧊占用低
 - 🔐密码功能
 - 🔏Pefender密码防破解
-- ⌨️ACIO(人工的控制命令行IO)来解决命令行I和O互相干扰
+- ⌨️ACIO(人工的控制命令行IO)来解决命令行I和O互相干扰²
 - 😊良好的UUE(User Use Experience, 用户使用体验)
 - 📱服务端管理
 - ⬆️开放, 自由
+
 > [!IMPORTANT]
 > 适用于任何桌面端平台，但目前已知不适用于Android平台。LosefChat可能不会在移动端平台成功编译或运行
 
-## 2 部署极其方便
-
-- **启动服务器**
-  输入 `2`，然后输入端口号即可启动服务器。
-- **内网穿透**
-  如果您的电脑本身处于公网环境，则无需配置内网穿透。
-- **命令控制**
-  简单输入一小段文本即可对服务器进行操作。
-- **连接服务器开始聊天**
-  输入 `1`，然后按提示操作，开始聊天。
-
-  如果您要查看消息,  输入l,  输入c可以清空屏幕.正常情况下不会显示消息，但会接收消息到缓存,这时候您就可以随意的编辑和输入消息
-- 服务端CLI
-
-  如果您要查看日志,  输入/l,  /clear可以清空屏幕,  /dl可以清空缓存
-
-## 3 模组支持
+## 模组支持
 
 LosefChat 提供了模组支持功能：
 
@@ -149,16 +146,54 @@ Release & tag信息规范
   - (更新简述)
   ```
 
-## License
-LosefChat 使用 MIT License
+## 如何使用？
+
+### 服务端
+
+先提前在运行目录下填写好config.txt，格式如下：
+
+```
+服务器所使用的或对方客户端连接(如服务器IP公网情况下)的端口
+服务器名称
+服务器描述
+```
+
+运行LosefChat，输入2，回车键。
+
+现在你可以输入/help了解如何控制服务端。
+
+> [!IMPORTANT]
+>
+> 强制开启白名单模式，除非修改源代码，否则必须将对方用户名添加白名单，否则对方无法进入
+
+### 客户端
+
+运行LosefChat，如果是首次运行或者某些情况，那么请按照他的要求做。没看到preset.txt的原因是可能在运行目录里面而并非软件目录。
+
+如果你完全满足以下3个条件，无一不满足：在白名单内、没有被对方服务器封禁、通过了LC客户端合法验证、preset.txt文件存在并且正常格式，则能成功且正常加入服务器聊天。
+
+至于如何输入、编辑、发送消息，请看“如何编译？”H2标题处。
+
+## 注释
+
+*：CTCC ： Chat Technological Creator Community，聊天科技创作社区
+
+°：模块化是指功能并不直接掺在Main类里面，也不直接掺在一个方法里面，且客户端和服务端、Main类分开类。并且有一个类就是一个模块的概念。
+
+²：仅限服务端
+
+
 
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+
 <!-- prettier-ignore-start -->
+
 <!-- markdownlint-disable -->
+
 <table>
   <tbody>
     <tr>
@@ -169,6 +204,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 </table>
 
 <!-- markdownlint-restore -->
+
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
