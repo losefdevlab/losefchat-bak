@@ -18,7 +18,7 @@ internal interface Lcs_openapi
 /// <summary>
 /// LC原版服务端核心类模组
 /// </summary>
-public partial class Server
+public partial class Server : Lcs_openapi
 {
     /// <summary>
     ///     最大日志缓存条目数

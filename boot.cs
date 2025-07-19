@@ -55,7 +55,7 @@ public partial class LosefChatPlatfrom
             Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
             Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
             Console.WriteLine("------------------------------------------------------------------------------------------------------");
-            Console.WriteLine("欢迎使用LosefChat v3.0.s3端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT,输入4发行说明");
+            Console.WriteLine("欢迎使用LosefChat 4.0.d1.b72客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT,输入4发行说明");
             while (true)
             {
                 if (!int.TryParse(Console.ReadLine(), out int choose))
@@ -86,11 +86,8 @@ public partial class LosefChatPlatfrom
                 }
                 else if (choose == 4)
                 {
-                    Console.WriteLine(@"Losefchat 3.0.s3(3.0.r3.b67) 发行说明：");
+                    Console.WriteLine(@"Losefchat 4.0.d1.b72 发行说明：");
                     Console.WriteLine(@"-------------------------------------");
-                    Console.WriteLine(@"这个版本将是3.0版本以及3.0.part3的最后一个版本");
-                    Console.WriteLine(@"经过充分调整，我们已经完善part3新加的功能,已经可以发布稳定版本了");
-                    Console.WriteLine(@"并且,我们还在本页添加了开放源代码许可以及所使用的自由创作者准则");
                     Console.WriteLine(@"-------------------------------------");
                     Console.WriteLine(@"GitHub：https://github.com/losefdevlab/losefchat");
                     Console.WriteLine(@"Email:along-losef@outlook.com");
