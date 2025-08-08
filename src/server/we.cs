@@ -8,6 +8,7 @@ namespace LosefDevLab.LosefChat.lcstd
         private void PeopleNumWarn()
         {
             
+            
         }
     }
 }

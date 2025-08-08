@@ -2,10 +2,6 @@ using LosefDevLab.LosefChat.lcstd;
 // Mod : Boot, Des.: LosefChat 启动器
 public partial class LosefChatPlatfrom
 {
-    private static Server server;
-    private static Client client;
-    private static Preset preset;
-    private static Config config;
     static void Main(string[] args)
     {
         string inputFilePath = ".ci";
@@ -66,18 +62,18 @@ public partial class LosefChatPlatfrom
 
                 if (choose == 1)
                 {
-                    client = new Client();
+                    Client client = new Client();
 
-                    preset = new Preset();
+                    Preset preset = new Preset();
                     preset.ReadPreset();
 
                     client.Connect(preset.ipvx, preset.ip, preset.port, preset.username, preset.password);
                 }
                 else if (choose == 2)
                 {
-                    config = new Config();
+                    Config config = new Config();
                     config.ReadConfig();
-                    server = new Server(config.port, config.sn, config.sd);
+                    LosefDevLab.LosefChat.lcstd.Server server = new LosefDevLab.LosefChat.lcstd.Server(config.port, config.sn, config.sd);
                     server.Start();
                 }
                 else if (choose == 3)
