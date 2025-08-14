@@ -1,4 +1,4 @@
-# LosefChat | 一款简易的跨桌面平台命令行聊天
+# LosefChat | 一款跨桌面平台的创意命令行聊天
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 
