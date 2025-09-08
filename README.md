@@ -16,15 +16,14 @@ Copyright (C) 2024-2025 **PPPO Technological Team(PTT)**<br>
 
 以上合并称为 LosefChat开发团队<br>
 
-Losefchat (2025) by LosefChat开发团队 2025-Now freedom-create in XFCSTD2.<br>
+Losefchat (2025) by LosefChat开发团队 2025-Now freedom-create in XFCSTD 3E0.<br>
 
-XFCSTD PATH:/XFCSTD2.md<br>
-
+XFCSTD PATH:/XFCSTD2_3E0.md<br>
 
 > **注意**：本项目需要自行编译，请参考“如何编译？”H2标题处。<br>
 >
 > **注意**：本项目的操作请参考“如何使用？”H2标题处。
-> 
+>
 > **注意**：我们会发布一些相关的公告在ANNOUNCEMENT.md文件中。请注意查看。
 
 ## License
@@ -120,6 +119,8 @@ tmux attach -t losefchat
 
 (但是这种方法有一种缺点，就是你需要提前进行编写preset.txt)
 
+更详细的，请转向docm/Build.md
+
 ## 贡献&Git规范标准
 
 CMTMSG规范
@@ -183,8 +184,6 @@ Release & tag信息规范
 °：模块化是指功能并不直接掺在Main类里面，也不直接掺在一个方法里面，且客户端和服务端、Main类分开类。并且有一个类就是一个模块的概念。
 
 ²：仅限服务端
-
-
 
 ## Contributors ✨
 

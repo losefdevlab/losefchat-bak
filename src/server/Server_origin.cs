@@ -372,7 +372,6 @@ namespace LosefDevLab.LosefChat.lcstd
             }
             finally
             {
-                // 确保资源释放
                 if (clientInfoObj is ClientInfo clientInfo) clientInfo.TcpClient?.Close();
             }
         }

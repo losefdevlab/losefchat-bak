@@ -10,3 +10,5 @@ losefchat.sln
 preset.txt
 *.txt
 *.json
+Folder.DotSettings.user
+*.user

@@ -246,12 +246,21 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             byte[] message = new byte[32567];
             int bytesRead;
-            bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
-            serverName = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
-            Log("服务器名称:"+serverName);
-            bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
-            serverDes = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
-            Log("服务器描述:"+serverDes);
+            try
+            {
+                bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
+                serverName = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
+                Log("服务器名称:"+serverName);
+                bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
+                serverDes = Encoding.UTF8.GetString(message, 0, bytesRead).Trim();
+                Log("服务器描述:"+serverDes);
+            }
+            catch (Exception ex)
+            {
+                Log($"接收服务器信息时发生异常: {ex.Message}");
+                return;
+            }
+            
             List<string> messages = new List<string>();
             while (true)
             {
@@ -261,8 +270,9 @@ namespace LosefDevLab.LosefChat.lcstd
                 {
                     bytesRead = clientStream?.Read(message, 0, 32567) ?? 0;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log($"接收消息时发生异常: {ex.Message}");
                     break;
                 }
 
