@@ -2,7 +2,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 
-namespace LosefDevLab.LosefChat.lcstd
+namespace losefchat.lcstd.client
 {
     // Mod : Client, Des.: LC原版客户端核心类模组
     // Part : Client主部分

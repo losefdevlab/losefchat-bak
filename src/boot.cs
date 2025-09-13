@@ -1,4 +1,6 @@
-using LosefDevLab.LosefChat.lcstd;
+using losefchat.lcstd.client;
+using losefchat.lcstd.server;
+using losefchat.lcstd.module;
 // Mod : Boot, Des.: LosefChat 启动器
 public partial class LosefChatPlatfrom
 {
@@ -75,7 +77,7 @@ public partial class LosefChatPlatfrom
                 {
                     Config config = new Config();
                     config.ReadConfig();
-                    LosefDevLab.LosefChat.lcstd.Server server = new LosefDevLab.LosefChat.lcstd.Server(config.port, config.sn, config.sd);
+                    Server server = new Server(config.port, config.sn, config.sd);
                     server.Start();
                 }
                 else if (choose == 3)

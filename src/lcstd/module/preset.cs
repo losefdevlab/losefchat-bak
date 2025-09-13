@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace LosefDevLab.LosefChat.lcstd
+namespace losefchat.lcstd.module
 {
 /// <summary>
 /// LC原版内含客户端预设工具

@@ -5,11 +5,11 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace LosefDevLab.LosefChat.lcstd
+namespace losefchat.lcstd.server
 {
 
     /// <summary>
-    /// LC原版服务端核心类模组 会场模式Selective Compilation
+    /// LC原版服务端核心类模组
     /// </summary>
     public partial class Server
     {
@@ -21,7 +21,7 @@ namespace LosefDevLab.LosefChat.lcstd
         /// <summary>
         ///     静态缓冲区池，用于减少内存分配
         /// </summary>
-        private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Create(8192, 20);
+        private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Create(32567, 10);
 
         /// <summary>
         ///     日志缓存同步锁对象（private readonly）
@@ -110,21 +110,6 @@ namespace LosefDevLab.LosefChat.lcstd
         ///     白名单用户集合，用于快速查找验证
         /// </summary>
         public HashSet<string> whiteListSet;
-
-        /// <summary>
-        ///     全体禁言状态
-        /// </summary>
-        private bool _allMuted = true;
-
-        /// <summary>
-        ///     允许在全体禁言时发言的用户列表
-        /// </summary>
-        private HashSet<string> _allowedSpeakers = new();
-
-        /// <summary>
-        ///     紧急暂停演讲状态
-        /// </summary>
-        private bool _emergencySuspended = false;
 
         /// <summary>
         ///     初始化服务器实例
@@ -274,13 +259,13 @@ namespace LosefDevLab.LosefChat.lcstd
                 tcpClient.GetStream().Write(allowBytes, 0, allowBytes.Length);
                 tcpClient.GetStream().Flush();
 
-                var usernameBuffer = new byte[256];
-                var usernameBytesRead = tcpClient.GetStream().Read(usernameBuffer, 0, usernameBuffer.Length);
-                var username = Encoding.UTF8.GetString(usernameBuffer, 0, usernameBytesRead).TrimEnd('\0').Trim();
+                var usernameBytes = new byte[32567];
+                var usernameBytesRead = tcpClient.GetStream().Read(usernameBytes, 0, 32567);
+                var username = Encoding.UTF8.GetString(usernameBytes, 0, usernameBytesRead).Trim();
 
-                var passwordBuffer = new byte[256];
-                var passwordBytesRead = tcpClient.GetStream().Read(passwordBuffer, 0, passwordBuffer.Length);
-                var password = Encoding.UTF8.GetString(passwordBuffer, 0, passwordBytesRead).TrimEnd('\0').Trim();
+                var passwordBytes = new byte[32567];
+                var passwordBytesRead = tcpClient.GetStream().Read(passwordBytes, 0, 32567);
+                var password = Encoding.UTF8.GetString(passwordBytes, 0, passwordBytesRead).Trim();
 
                 if (!IsUserValid(username, password))
                 {
@@ -300,23 +285,6 @@ namespace LosefDevLab.LosefChat.lcstd
                 Thread.Sleep(100);
                 SendMessage(clientInfo, serverDescription);
                 Thread.Sleep(400);
-                
-                if (_allMuted)
-                {
-                    if (_allowedSpeakers.Contains(clientInfo.Username))
-                    {
-                        SendMessage(clientInfo, "您已被授权在全体禁言模式下发言。");
-                    }
-                    else
-                    {
-                        SendMessage(clientInfo, "当前处于全体禁言模式，您暂时无法发言。");
-                    }
-                }
-                else
-                {
-                    SendMessage(clientInfo, "当前可以自由发言。");
-                }
-                
                 BroadcastMessage($"{clientInfo.Username} 加入了服务器");
 
                 var clientThread = new Thread(HandleClientCommunication);
@@ -359,7 +327,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                 Log($"用户 '{clientInfo.Username}' 连接到服务器.");
 
-                var messageBytes = new byte[8192];
+                var messageBytes = new byte[32567];
                 int bytesRead;
 
                 while (true)
@@ -368,7 +336,7 @@ namespace LosefDevLab.LosefChat.lcstd
 
                     try
                     {
-                        bytesRead = clientStream.Read(messageBytes, 0, 8192);
+                        bytesRead = clientStream.Read(messageBytes, 0, 32567);
                     }
                     catch (Exception ex)
                     {
@@ -379,25 +347,15 @@ namespace LosefDevLab.LosefChat.lcstd
                     if (bytesRead == 0)
                         break;
 
-                    var data = Encoding.UTF8.GetString(messageBytes, 0, bytesRead).TrimEnd('\0');
+                    var data = Encoding.UTF8.GetString(messageBytes, 0, bytesRead);
 
                     if (mutedUsersSet.Contains(clientInfo.Username))
                     {
                         SendMessage(clientInfo, "你已被禁言，无法发送消息！");
                         continue;
                     }
-                    if (_allMuted && !_allowedSpeakers.Contains(clientInfo.Username))
-                    {
-                        SendMessage(clientInfo, "当前处于全体禁言模式，您无权发言！");
-                        continue;
-                    }
-                    var displayName = clientInfo.Username;
-                    if (_allowedSpeakers.Contains(clientInfo.Username))
-                    {
-                        displayName = "[演讲者]" + clientInfo.Username;
-                    }
 
-                    BroadcastMessage($"{displayName}: {data}", clientInfo.Username);
+                    BroadcastMessage($"{clientInfo.Username}: {data}", clientInfo.Username);
                 }
 
                 lock (lockObject)
@@ -414,7 +372,6 @@ namespace LosefDevLab.LosefChat.lcstd
             }
             finally
             {
-                // 确保资源释放
                 if (clientInfoObj is ClientInfo clientInfo) clientInfo.TcpClient?.Close();
             }
         }
@@ -426,7 +383,7 @@ namespace LosefDevLab.LosefChat.lcstd
         /// <param name="senderUsername">消息发送者用户名</param>
         public void BroadcastMessage(string message, string senderUsername = "")
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (message.Trim() == "")
                 return;
 
             var canSendMessage = false;
@@ -441,50 +398,27 @@ namespace LosefDevLab.LosefChat.lcstd
 
             if (canSendMessage)
             {
-                // 确保消息不会超过缓冲区大小
-                if (message.Length > 8000)
-                {
-                    message = message.Substring(0, 8000);
-                }
-
-                // 使用动态大小的缓冲区避免缓冲区溢出问题
-                byte[] broadcastBytes;
+                // 使用缓冲池减少内存分配
+                var broadcastBytes = _bufferPool.Rent(message.Length * 2);
                 try
                 {
-                    broadcastBytes = Encoding.UTF8.GetBytes(message);
-                }
-                catch (ArgumentException)
-                {
-                    // 如果编码失败，使用最大可能的缓冲区大小
-                    broadcastBytes = new byte[8192];
-                    var byteCount = Encoding.UTF8.GetBytes(message, 0, Math.Min(message.Length, 8192), broadcastBytes, 0);
-                    Array.Resize(ref broadcastBytes, byteCount);
-                }
+                    var byteCount = Encoding.UTF8.GetBytes(message, 0, message.Length, broadcastBytes, 0);
 
-                // 检查消息长度，避免过长消息导致客户端崩溃
-                if (broadcastBytes.Length > 8192)
-                {
-                    Log("警告：消息过长，已截断");
-                    Array.Resize(ref broadcastBytes, 8192);
-                }
-
-                lock (lockObject)
-                {
-                    foreach (var client in clientList)
+                    lock (lockObject)
                     {
-                        if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername)) continue;
-
-                        try
+                        foreach (var client in clientList)
                         {
+                            if (client.Username == senderUsername && mutedUsersSet.Contains(senderUsername)) continue;
+
                             var clientStream = client.TcpClient.GetStream();
-                            clientStream.Write(broadcastBytes, 0, broadcastBytes.Length);
+                            clientStream.Write(broadcastBytes, 0, byteCount);
                             clientStream.Flush();
                         }
-                        catch (Exception ex)
-                        {
-                            Log($"向用户 {client.Username} 发送消息时出错: {ex.Message}");
-                        }
                     }
+                }
+                finally
+                {
+                    _bufferPool.Return(broadcastBytes);
                 }
 
                 Log(message);
@@ -498,31 +432,12 @@ namespace LosefDevLab.LosefChat.lcstd
         /// <param name="message">消息内容</param>
         public void SendMessage(ClientInfo clientInfo, string message)
         {
-            if (string.IsNullOrWhiteSpace(message))
+            if (message.Trim() == "")
                 return;
 
-            // 确保消息不会超过缓冲区大小
-            if (message.Length > 8000)
-            {
-                message = message.Substring(0, 8000);
-            }
-
             var messageBytes = Encoding.UTF8.GetBytes(message);
-            // 检查消息长度，避免过长消息导致客户端崩溃
-            if (messageBytes.Length > 8192)
-            {
-                Array.Resize(ref messageBytes, 8192);
-            }
-            
-            try
-            {
-                clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
-                clientInfo.TcpClient.GetStream().Flush();
-            }
-            catch (Exception ex)
-            {
-                Log($"向用户 {clientInfo.Username} 发送消息时出错: {ex.Message}");
-            }
+            clientInfo.TcpClient.GetStream().Write(messageBytes, 0, messageBytes.Length);
+            clientInfo.TcpClient.GetStream().Flush();
         }
 
         /// <summary>
@@ -889,44 +804,7 @@ namespace LosefDevLab.LosefChat.lcstd
                 else if (input.StartsWith("/bc"))
                 {
                     var _bcmsg = input.Substring(4);
-                    // 限制广播消息长度
-                    if (_bcmsg.Length > 8000)
-                    {
-                        _bcmsg = _bcmsg.Substring(0, 8000);
-                    }
                     BroadcastMessage($"服务器广播：{_bcmsg}");
-                }
-                else if (input.StartsWith("/allspeak"))
-                {
-                    _allMuted = false;
-                    _allowedSpeakers.Clear();
-                    BroadcastMessage("管理员已开放全体发言权限。");
-                    Log("管理员开放了全体发言权限。");
-                }
-                else if (input.StartsWith("/allmute"))
-                {
-                    _allMuted = true;
-                    _allowedSpeakers.Clear();
-                    BroadcastMessage("管理员已启用全体禁言模式。");
-                    Log("管理员启用了全体禁言模式。");
-                }
-                else if (input.StartsWith("/letspeak"))
-                {
-                    var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length > 1)
-                    {
-                        var usernames = parts.Skip(1).ToArray();
-                        foreach (var username in usernames)
-                        {
-                            _allowedSpeakers.Add(username);
-                            var client = clientList.FirstOrDefault(c => c.Username == username);
-                            if (client != null)
-                            {
-                                SendMessage(client, "您已被管理员授权在全体禁言模式下发言。");
-                            }
-                        }
-                        Log($"管理员已授权以下用户在全体禁言模式下发言: {string.Join(", ", usernames)}");
-                    }
                 }
                 else if (input.StartsWith("/help"))
                 {
@@ -947,9 +825,6 @@ namespace LosefDevLab.LosefChat.lcstd
                     Console.WriteLine("/clear: 清空控制台");
                     Console.WriteLine("/log <message>: 手动的记录日志, 适用于某些事件的标记与记录");
                     Console.WriteLine("/bc <message>: 广播消息给所有用户");
-                    Console.WriteLine("/allspeak: 开放全体发言权限");
-                    Console.WriteLine("/allmute: 启用全体禁言模式");
-                    Console.WriteLine("/letspeak <username> ... <username>: 允许指定用户在全体禁言时发言");
                     Console.WriteLine("/help: 显示可用命令");
                 }
                 else if (input.Trim() == "")
@@ -970,7 +845,7 @@ namespace LosefDevLab.LosefChat.lcstd
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(message))
+                if (message.Trim() == "")
                     return;
 
                 lock (_cacheLock)

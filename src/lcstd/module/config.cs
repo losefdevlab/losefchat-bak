@@ -1,4 +1,4 @@
-namespace LosefDevLab.LosefChat.lcstd
+namespace losefchat.lcstd.module
 {
     
     /// <summary>
