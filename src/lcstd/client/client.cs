@@ -216,7 +216,7 @@ namespace losefchat.lcstd.client
                     string msg = reader.ReadToEnd();
                     if (!string.IsNullOrEmpty(msg))
                     {
-                        if (msg.Trim() != "" && msg != "exit") SendMessage(msg);
+                        if (msg.Trim() != "" && msg != "exit") SendMessage("[Chat]"+msg);
                         else if (msg.Trim() == "exit")
                         {
                             SendMessage("我下线了拜拜");

@@ -53,7 +53,7 @@ public partial class LosefChatPlatfrom
             Console.WriteLine(@" | |___  | (_) | \__ \ |  __/ |  _| | |___  | | | | | (_| | | |_");
             Console.WriteLine(@" |_____|  \___/  |___/  \___| |_|    \____| |_| |_|  \__,_|  \__|");
             Console.WriteLine("------------------------------------------------------------------------------------------------------");
-            Console.WriteLine("欢迎使用LosefChat 4.0.d1.b80客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT,输入4发行说明");
+            Console.WriteLine("欢迎使用LosefChat 4.1.d1.b80客户端请注意:正常启动后，仅输出，输入模式请另启动程序（使用-ci附加参数启动程序）\n输入1 开始聊天,输入2 server,输入3 EXIT,输入4发行说明");
                 if (!int.TryParse(Console.ReadLine(), out int choose))
                 {
                     Console.WriteLine("无效输入，请输入1、2、3或4。");
@@ -113,7 +113,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 
 4
 4-------------------------------------");
-                    Console.WriteLine(@"LosefChat使用了自由创作者准则XFCSTD2，这意味着你在本项目上搭建的一切公开社区或者行使的一切社区行为都需要遵守XFCSTD2条款，以下是XFCSTD2原文：");
+                    Console.WriteLine(@"LosefChat使用了自由创作者准则XFCSTD，这意味着你在本项目上搭建的一切公开社区或者行使的一切社区行为都需要遵守XFCSTD条款，以下是XFCSTD原文：");
                     Console.WriteLine(@"# XYLCS工作室制定的自由创作者标准 3 Editver. 0 （XFCSTD 3E0）
 
 XYLCS Studio's Freedom Creator Standard 3 Editver. 0 (XFCSTD 3E0)

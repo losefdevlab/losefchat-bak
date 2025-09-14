@@ -2,7 +2,6 @@
 /bin
 /obj
 .gitignore
-losefchat.sln
 *.editorconfig
 /.lingma
 /.vscode

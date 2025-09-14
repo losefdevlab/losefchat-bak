@@ -354,8 +354,13 @@ namespace losefchat.lcstd.server
                         SendMessage(clientInfo, "你已被禁言，无法发送消息！");
                         continue;
                     }
+                    var bc = "";
+                    if (data.ToString().Trim().StartsWith("[Chat]"))
+                    {
+                        bc = data.ToString().Trim().Substring(8);
+                    }
 
-                    BroadcastMessage($"{clientInfo.Username}: {data}", clientInfo.Username);
+                    BroadcastMessage($"{clientInfo.Username}: {bc}", clientInfo.Username);
                 }
 
                 lock (lockObject)
